@@ -1,71 +1,70 @@
 {
-    "capAdd": [
-      "SYS_PTRACE"
-    ],
-    "customizations": {
-      "vscode": {
-        "extensions": [
-          "DavidAnson.vscode-markdownlint",
-          "Tyriar.sort-lines",
-          "bradzacher.vscode-copy-filename",
-          "foxundermoon.shell-format",
-          "ms-vscode.cpptools",
-          "streetsidesoftware.code-spell-checker",
-          "usernamehw.errorlens"
-        ],
-        "settings": {
-          "[cpp]": {
-            "C_Cpp.autocompleteAddParentheses": true,
-            "C_Cpp.codeAnalysis.clangTidy.enabled": true,
-            "C_Cpp.intelliSenseEngine": "default",
-            "editor.defaultFormatter": "ms-vscode.cpptools"
-          },
-
-          "[shellscript]": {
-            "editor.defaultFormatter": "foxundermoon.shell-format",
-            "editor.tabSize": 4,
-            "files.eol": "\n"
-          },
-          "editor.bracketPairColorization.enabled": true,
-          "editor.comments.insertSpace": true,
-          "editor.detectIndentation": false,
-          "editor.insertSpaces": true,
-          "editor.snippetSuggestions": "top",
-          "editor.tabCompletion": "on",
-          "editor.tabSize": 2,
-          "editor.trimAutoWhitespace": true,
-          "explorer.confirmDelete": false,
-          "extensions.autoUpdate": true,
-          "extensions.ignoreRecommendations": true,
-          "files.associations": {
-            "*.code-snippets": "jsonc"
-          },
-          "files.autoSave": "afterDelay",
-          "files.eol": "auto",
-          "files.exclude": {
-            "**/.vscode": true
-          },
-          "remote.downloadExtensionsLocally": false,
-          "search.exclude": {
-            "**/*.code-search": true,
-            "**/*.git": true,
-            "**/*.vscode-server": true,
-            "**/bower_components": true,
-            "**/node_modules": true
-          },
-          "telemetry.telemetryLevel": "off",
-          "windows.title": "${folderPath}",
-          "workbench.startupEditor": "none"
-        }
+  "capAdd": [
+    "SYS_PTRACE"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "DavidAnson.vscode-markdownlint",
+        "Tyriar.sort-lines",
+        "bradzacher.vscode-copy-filename",
+        "foxundermoon.shell-format",
+        "ms-vscode.cpptools",
+        "streetsidesoftware.code-spell-checker",
+        "usernamehw.errorlens"
+      ],
+      "settings": {
+        "[cpp]": {
+          "C_Cpp.autocompleteAddParentheses": true,
+          "C_Cpp.codeAnalysis.clangTidy.enabled": true,
+          "C_Cpp.intelliSenseEngine": "default",
+          "editor.defaultFormatter": "ms-vscode.cpptools"
+        },
+        "[shellscript]": {
+          "editor.defaultFormatter": "foxundermoon.shell-format",
+          "editor.tabSize": 4,
+          "files.eol": "\n"
+        },
+        "editor.bracketPairColorization.enabled": true,
+        "editor.comments.insertSpace": true,
+        "editor.detectIndentation": false,
+        "editor.insertSpaces": true,
+        "editor.snippetSuggestions": "top",
+        "editor.tabCompletion": "on",
+        "editor.tabSize": 2,
+        "editor.trimAutoWhitespace": true,
+        "explorer.confirmDelete": false,
+        "extensions.autoUpdate": true,
+        "extensions.ignoreRecommendations": true,
+        "files.associations": {
+          "*.code-snippets": "jsonc"
+        },
+        "files.autoSave": "afterDelay",
+        "files.eol": "auto",
+        "files.exclude": {
+          "**/.vscode": true
+        },
+        "remote.downloadExtensionsLocally": false,
+        "search.exclude": {
+          "**/*.code-search": true,
+          "**/*.git": true,
+          "**/*.vscode-server": true,
+          "**/bower_components": true,
+          "**/node_modules": true
+        },
+        "telemetry.telemetryLevel": "off",
+        "windows.title": "${folderPath}",
+        "workbench.startupEditor": "none"
       }
-    },
-    "image": "mcr.microsoft.com/vscode/devcontainers/cpp",
-    "mounts": [
-      "source=${localWorkspaceFolder}/snippets,target=${containerWorkspaceFolder}/.vscode,type=bind,consistency=cached"
-    ],
-    "postCreateCommand": "chmod +x ${containerWorkspaceFolder}/.devcontainer/postCreateScript.sh && ${containerWorkspaceFolder}/.devcontainer/postCreateScript.sh",
-    "runArgs": [
-      "--rm",
-      "--name=vsc-${localEnv:USER}-${containerWorkspaceFolderBasename}-${devcontainerId}"
-    ]
-  }
+    }
+  },
+  "image": "mcr.microsoft.com/vscode/devcontainers/cpp",
+  "mounts": [
+    "source=${localWorkspaceFolder}/snippets,target=${containerWorkspaceFolder}/.vscode,type=bind,consistency=cached"
+  ],
+  "postCreateCommand": "chmod +x ${containerWorkspaceFolder}/.devcontainer/postCreateScript.sh && ${containerWorkspaceFolder}/.devcontainer/postCreateScript.sh",
+  "runArgs": [
+    "--rm",
+    "--name=vsc-${localEnv:USER}-${containerWorkspaceFolderBasename}-${devcontainerId}"
+  ]
+}
