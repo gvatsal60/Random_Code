@@ -47,7 +47,7 @@ repos:
       - id: clang-format
   # ESLint for linting JavaScript and TypeScript files
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: "v9.39.1"
+    rev: "v10.0.0-alpha.0"
     hooks:
       - id: eslint
   # Runs mypy to check Python type annotations.
@@ -114,7 +114,7 @@ repos:
       - id: checkmake
   # SQLFluff for linting and fixing SQL files
   - repo: https://github.com/sqlfluff/sqlfluff
-    rev: "4.0.0a1"
+    rev: "4.0.0a2"
     hooks:
       - id: sqlfluff-lint
       - id: sqlfluff-fix
