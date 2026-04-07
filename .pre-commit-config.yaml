@@ -47,12 +47,12 @@ repos:
       - id: clang-format
   # ESLint for linting JavaScript and TypeScript files
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: "v10.1.0"
+    rev: "v10.2.0"
     hooks:
       - id: eslint
   # Runs mypy to check Python type annotations.
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: "v1.19.1"
+    rev: "v1.20.0"
     hooks:
       - id: mypy
   # Lints SCSS files to enforce style and best practices.
