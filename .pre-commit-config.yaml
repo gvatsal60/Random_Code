@@ -114,7 +114,7 @@ repos:
       - id: checkmake
   # SQLFluff for linting and fixing SQL files
   - repo: https://github.com/sqlfluff/sqlfluff
-    rev: "4.2.1"
+    rev: "4.2.2"
     hooks:
       - id: sqlfluff-lint
       - id: sqlfluff-fix
