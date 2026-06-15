@@ -47,7 +47,7 @@ repos:
       - id: clang-format
   # ESLint for linting JavaScript and TypeScript files
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: "v10.4.1"
+    rev: "v10.5.0"
     hooks:
       - id: eslint
   # Runs mypy to check Python type annotations.
@@ -125,7 +125,7 @@ repos:
       - id: rubocop
   # Terraform-py for formatting and validating Terraform files
   - repo: https://github.com/AleksaC/terraform-py
-    rev: "v1.15.5"
+    rev: "v1.15.6"
     hooks:
       - id: tf-fmt
       - id: tf-validate
