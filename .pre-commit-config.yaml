@@ -42,7 +42,7 @@ repos:
       - id: python-use-type-annotations
   # Clang-format for formatting C, C++, and JavaScript files
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: "v23.1.0"
+    rev: "v23.1.1"
     hooks:
       - id: clang-format
   # ESLint for linting JavaScript and TypeScript files
@@ -77,7 +77,7 @@ repos:
       - id: csslint
   # shfmt hook for formatting shell scripts
   - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.13.1-1
+    rev: v3.14.1-1
     hooks:
       - id: shfmt
         name: shfmt
@@ -128,12 +128,12 @@ repos:
       - id: sqlfluff-fix
   # RuboCop for linting Ruby files
   - repo: https://github.com/rubocop/rubocop
-    rev: "v1.90.0"
+    rev: "v1.91.0"
     hooks:
       - id: rubocop
   # Terraform-py for formatting and validating Terraform files
   - repo: https://github.com/AleksaC/terraform-py
-    rev: "v1.16.1"
+    rev: "v1.16.2"
     hooks:
       - id: tf-fmt
       - id: tf-validate
