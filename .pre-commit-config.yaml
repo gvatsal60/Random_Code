@@ -1,3 +1,5 @@
+# Canonical pre-commit configuration - identical across all repositories and branches.
+# Managed by gvatsal60/.github; keep in sync when hooks are added or upgraded.
 repos:
   # Syncs pre-commit dependencies with the latest versions.
   - repo: https://github.com/mxr/sync-pre-commit-deps
@@ -15,6 +17,7 @@ repos:
       - id: check-docstring-first
       - id: check-executables-have-shebangs
       - id: check-json
+        exclude: '\.ipynb$' # Exclude Jupyter notebooks
       - id: check-merge-conflict
       - id: check-shebang-scripts-are-executable
       - id: check-symlinks
@@ -22,6 +25,7 @@ repos:
       - id: check-vcs-permalinks
       - id: check-xml
       - id: check-yaml
+        args: [--allow-multiple-documents] # Allow multi-document YAML streams
       - id: debug-statements
       - id: destroyed-symlinks
       # - id: detect-aws-credentials
@@ -33,13 +37,46 @@ repos:
       - id: name-tests-test
       - id: pretty-format-json
         args: [--autofix]
+        exclude: '\.ipynb$' # Exclude Jupyter notebooks
       - id: requirements-txt-fixer
       - id: trailing-whitespace
+  # Ruff for linting and formatting Python files
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: "v0.16.9"
+    hooks:
+      - id: ruff-check
+        args: [--fix, --unsafe-fixes]
+      - id: ruff-format
   # Uses pygrep to enforce Python type annotations.
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: "v1.10.0"
     hooks:
       - id: python-use-type-annotations
+  # Runs mypy to check Python type annotations.
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: "v2.3.1"
+    hooks:
+      - id: mypy
+  # Pyupgrade for modernizing Python syntax
+  - repo: https://github.com/asottile/pyupgrade
+    rev: "v3.21.2"
+    hooks:
+      - id: pyupgrade
+  # Autopep8 for auto-formatting Python code
+  - repo: https://github.com/hhatto/autopep8
+    rev: "v2.3.2"
+    hooks:
+      - id: autopep8
+  # Isort for sorting Python imports
+  - repo: https://github.com/pycqa/isort
+    rev: "9.0.2"
+    hooks:
+      - id: isort
+  # Flake8 for linting Python files
+  - repo: https://github.com/pycqa/flake8
+    rev: "7.4.1"
+    hooks:
+      - id: flake8
   # Clang-format for formatting C, C++, and JavaScript files
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: "v23.1.1"
@@ -50,11 +87,6 @@ repos:
     rev: "v10.11.0"
     hooks:
       - id: eslint
-  # Runs mypy to check Python type annotations.
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: "v2.3.1"
-    hooks:
-      - id: mypy
   # Lints SCSS files to enforce style and best practices.
   - repo: https://github.com/pre-commit/mirrors-scss-lint
     rev: "v0.60.0"
@@ -75,9 +107,14 @@ repos:
     rev: "v1.0.5"
     hooks:
       - id: csslint
+  # Nbstripout for stripping output from Jupyter Notebooks
+  - repo: https://github.com/kynan/nbstripout
+    rev: "0.9.1"
+    hooks:
+      - id: nbstripout
   # shfmt hook for formatting shell scripts
   - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.14.1-1
+    rev: "v3.14.1-1"
     hooks:
       - id: shfmt
         name: shfmt
@@ -150,7 +187,7 @@ repos:
         entry: cmd --githook pre-commit
   # Markdownlint for linting Markdown files
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.23.3
+    rev: "v0.23.3"
     hooks:
       - id: markdownlint-cli2
         args: [--fix]
