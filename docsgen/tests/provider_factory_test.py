@@ -14,7 +14,7 @@ from strands.models.gemini import GeminiModel
 from strands.models.litellm import LiteLLMModel
 from strands.models.ollama import OllamaModel
 from strands.models.openai import OpenAIModel
-from tests.helpers import ScriptedModel
+from testkit.helpers import ScriptedModel
 
 
 @pytest.mark.parametrize(

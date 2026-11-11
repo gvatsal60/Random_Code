@@ -504,7 +504,10 @@ def _discover(
                 for p_ in profiles
                 if p_.get("status", "ACTIVE") == "ACTIVE"
             )
-        except Exception:  # noqa: BLE001 - older accounts/regions may not support profiles
-            pass
+        except Exception as exc:  # noqa: BLE001 - older accounts/regions may not support profiles
+            logger.debug(
+                "Bedrock inference profiles unavailable: %s",
+                sanitize_error(str(exc), 200),
+            )
         return ids
     raise NotImplementedError

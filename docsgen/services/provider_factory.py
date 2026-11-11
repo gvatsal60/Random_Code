@@ -51,13 +51,13 @@ def validate_config(
                 problems.append(f"{field.label}: {exc}")
     if config.provider == ProviderId.BEDROCK:
         mode = settings.get("auth_mode", "default_chain")
-        if mode == "access_keys":
-            if not secrets.get("aws_access_key_id") or not secrets.get(
-                "aws_secret_access_key"
-            ):
-                problems.append(
-                    "AWS access key ID and secret access key are required for access-key authentication."
-                )
+        has_keys = secrets.get("aws_access_key_id") and secrets.get(
+            "aws_secret_access_key"
+        )
+        if mode == "access_keys" and not has_keys:
+            problems.append(
+                "AWS access key ID and secret access key are required for access-key authentication."
+            )
         if mode == "assume_role" and not settings.get("role_arn"):
             problems.append("An IAM role ARN is required to assume a role.")
         if mode == "profile" and not settings.get("profile_name"):

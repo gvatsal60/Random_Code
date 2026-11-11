@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import docx
 import pytest
 from models.agent_models import DraftStatus, TaskType, WorkflowStage
 from services.workflow_service import WorkflowError, WorkflowService
-from tests import scripted_outputs as so
+from testkit import scripted_outputs as so
+from testkit.helpers import ScriptedModel, use_model
 from tests.conftest import load_sources, load_template
-from tests.helpers import ScriptedModel
-from tests.test_agents import use_model
 
 
 @pytest.fixture()
@@ -142,14 +142,13 @@ def test_complete_workflow_end_to_end(ready, tmp_path):
         chk.check: chk.status for chk in record.write_report.format_checks}
     assert "changed" not in statuses.values()
 
-    payload = json.loads(open(record.json_path, encoding="utf-8").read())
+    json_text = Path(record.json_path).read_text(encoding="utf-8")
+    payload = json.loads(json_text)
     assert payload["generation"]["version"] == 1 and payload["extraction"]["facts"]
-    assert (
-        "Formatting preservation" in open(
-            record.report_path, encoding="utf-8").read()
-    )
+    report_text = Path(record.report_path).read_text(encoding="utf-8")
+    assert "Formatting preservation" in report_text
     assert record.comparison.modified > 0
-    assert "sk-test" not in open(record.json_path, encoding="utf-8").read()
+    assert "sk-test" not in json_text
 
 
 def test_populate_placeholders_task_and_versions(ready):

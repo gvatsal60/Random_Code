@@ -9,9 +9,9 @@ import pytest
 from models.agent_models import TaskType
 from services.workflow_service import WorkflowService
 from streamlit.testing.v1 import AppTest
-from tests import scripted_outputs as so
+from testkit import scripted_outputs as so
+from testkit.helpers import ScriptedModel
 from tests.conftest import ROOT, load_sources, load_template
-from tests.helpers import ScriptedModel
 
 PAGES = [
     "Dashboard",

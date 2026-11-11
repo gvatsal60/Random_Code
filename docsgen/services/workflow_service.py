@@ -764,7 +764,10 @@ class WorkflowService:
         try:
             write_report = write_document(
                 # type: ignore[arg-type]
-                ctx.template_path, out_path, approved)
+                ctx.template_path,
+                out_path,
+                approved,
+            )
         except Exception as exc:
             state.log(
                 "Generate document",

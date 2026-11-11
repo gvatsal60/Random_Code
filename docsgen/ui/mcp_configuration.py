@@ -633,10 +633,12 @@ def _tool_tester(c: ServiceContainer) -> None:
         if st.button("Run tool", key="mcp_test_run", disabled=not confirmed):
             try:
                 args = json.loads(args_text or "{}")
-                if not isinstance(args, dict):
-                    raise ValueError("Arguments must be a JSON object.")
             except ValueError as exc:
                 st.error(f"Invalid JSON arguments: {exc}")
+                return
+            if not isinstance(args, dict):
+                st.error(
+                    "Invalid JSON arguments: Arguments must be a JSON object.")
                 return
             with st.spinner("Calling tool…"):
                 result = c.mcp.test_tool(

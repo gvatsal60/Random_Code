@@ -103,3 +103,16 @@ def last_tool_result_text(messages: list) -> str:
                     c.get("text", "") for c in block["toolResult"].get("content", [])
                 )
     return ""
+
+
+def use_model(container: Any, model: Model) -> Model:
+    """Make ``container``'s LLM service return ``model`` for every agent run."""
+    from models.provider_models import ProviderConfig, ProviderId
+
+    container.llm._factory = lambda cfg, secrets: model
+    container.credentials.set_secret(
+        "llm/openai", "api_key", "sk-test-0000000000000", persist=False
+    )
+    container.llm.apply(ProviderConfig(
+        provider=ProviderId.OPENAI, model_id="scripted"))
+    return model

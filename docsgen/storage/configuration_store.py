@@ -20,7 +20,7 @@ import os
 import tempfile
 import threading
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ _SECRET_KEY_HINTS = ("api_key", "secret", "token", "password", "authorization")
 
 
 class ConfigurationStore:
-    _locks: dict[str, threading.Lock] = {}
+    _locks: ClassVar[dict[str, threading.Lock]] = {}
 
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -79,11 +79,11 @@ class ConfigurationStore:
                     and isinstance(v, str)
                     and v
                     and not key.endswith("_name")
+                    and key not in {"secret_env_keys", "secret_header_names"}
                 ):
-                    if key not in {"secret_env_keys", "secret_header_names"}:
-                        raise ValueError(
-                            f"Refusing to store secret-like value '{path}.{k}' in plain configuration."
-                        )
+                    raise ValueError(
+                        f"Refusing to store secret-like value '{path}.{k}' in plain configuration."
+                    )
                 ConfigurationStore._assert_no_secrets(v, f"{path}.{k}")
         elif isinstance(value, list):
             for i, item in enumerate(value):

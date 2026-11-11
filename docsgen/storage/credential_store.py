@@ -18,7 +18,7 @@ import os
 import tempfile
 import threading
 from pathlib import Path
-from typing import Protocol
+from typing import ClassVar, Protocol
 
 from cryptography.fernet import Fernet, InvalidToken
 from services.security import Redactor
@@ -90,7 +90,7 @@ def load_or_create_master_key(key_file: Path) -> bytes:
 class EncryptedFileCredentialStore:
     """Persistent, encrypted credential storage shared by all sessions of this installation."""
 
-    _locks: dict[str, threading.Lock] = {}
+    _locks: ClassVar[dict[str, threading.Lock]] = {}
 
     def __init__(self, path: Path, key_file: Path) -> None:
         self.path = path

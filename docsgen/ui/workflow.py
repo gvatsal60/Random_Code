@@ -67,10 +67,10 @@ def render(c: ServiceContainer) -> None:
     r[1].markdown(
         f"**Template**  \n{badge('Ready' if ready_tpl else 'Missing', 'ok' if ready_tpl else 'error')} {c.session.template.file_name if ready_tpl else ''}"
     )
-    r[2].markdown(
-        f"**Sources**  \n{badge(f'{len(c.session.sources)} file(s)',
-                                'ok' if ready_src else 'error')}"
+    sources_badge = badge(
+        f"{len(c.session.sources)} file(s)", "ok" if ready_src else "error"
     )
+    r[2].markdown(f"**Sources**  \n{sources_badge}")
     r[3].markdown(f"**Task**  \n{TASK_LABELS[task]}")
     if not ready_llm:
         goto_button(

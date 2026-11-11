@@ -16,6 +16,7 @@ import re
 import threading
 import unicodedata
 from pathlib import Path
+from typing import ClassVar
 from urllib.parse import urlparse
 
 _SECRET_PATTERNS = [
@@ -36,7 +37,7 @@ class Redactor:
     """Process-wide registry of secret values that must never appear in output."""
 
     _lock = threading.Lock()
-    _values: set[str] = set()
+    _values: ClassVar[set[str]] = set()
 
     @classmethod
     def register(cls, value: str | None) -> None:

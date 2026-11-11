@@ -69,7 +69,8 @@ document_engine/              Template parsing, placeholder handling, section ma
 storage/                      Encrypted credential store, configuration store, session store
 models/                       Pydantic models
 mcp_servers/demo_server.py    Demo MCP server (stdio, Streamable HTTP, SSE)
-tests/                        Unit, UI (Streamlit AppTest) and live integration tests
+tests/                        Unit, UI (Streamlit AppTest) and live integration tests (*_test.py)
+testkit/                      Test support: scripted Strands model and canned agent outputs
 ```
 
 The three managers are independent. The **LLM Manager** owns "which model". The **MCP Manager** owns

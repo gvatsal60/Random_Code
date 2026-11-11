@@ -174,10 +174,11 @@ def _record_details(record: GenerationRecord, state) -> None:
     with t3:
         report = state.final_validation if state else None
         if report:
-            st.markdown(
-                f"{badge(f'{report.completeness_score:.0f}% complete',
-                         'ok' if report.complete else 'warning')} {report.summary}"
+            score_badge = badge(
+                f"{report.completeness_score:.0f}% complete",
+                "ok" if report.complete else "warning",
             )
+            st.markdown(f"{score_badge} {report.summary}")
             if report.issues:
                 st.dataframe(
                     [i.model_dump() for i in report.issues],

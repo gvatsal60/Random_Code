@@ -6,21 +6,10 @@ from __future__ import annotations
 import pytest
 from agents import AGENT_SPECS
 from models.agent_models import AgentRole, TemplateAnalysis
-from models.provider_models import ProviderConfig, ProviderId
 from services.agent_manager import AgentRunError
-from tests import scripted_outputs as so
+from testkit import scripted_outputs as so
+from testkit.helpers import ScriptedModel, last_tool_result_text, use_model
 from tests.conftest import load_sources, load_template
-from tests.helpers import ScriptedModel, last_tool_result_text
-
-
-def use_model(container, model):
-    container.llm._factory = lambda cfg, secrets: model
-    container.credentials.set_secret(
-        "llm/openai", "api_key", "sk-test-0000000000000", persist=False
-    )
-    container.llm.apply(ProviderConfig(
-        provider=ProviderId.OPENAI, model_id="scripted"))
-    return model
 
 
 def test_specs_are_complete():

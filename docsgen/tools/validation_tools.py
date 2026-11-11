@@ -177,9 +177,9 @@ def make_find_duplicate_content(ctx: DocumentContext):
         """
         try:
             texts = json.loads(sections_json)
-            if not isinstance(texts, dict):
-                raise ValueError
         except ValueError:
+            texts = None
+        if not isinstance(texts, dict):
             return "sections_json must be a JSON object of {target: text}."
         dups = duplicate_sentences({str(k): str(v) for k, v in texts.items()})
         return (
