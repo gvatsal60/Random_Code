@@ -146,9 +146,8 @@ def test_mcp_tool_executed_only_when_authorized_and_approved(
 
 def test_agent_failure_is_reported(container):
     class Broken(ScriptedModel):
-        async def stream(self, *a, **k):
+        def stream(self, *a, **k):
             raise RuntimeError("upstream error with key sk-should-not-leak-123456")
-            yield  # pragma: no cover
 
     use_model(container, Broken({}))
     load_template(container)

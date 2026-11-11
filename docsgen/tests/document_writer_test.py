@@ -185,3 +185,20 @@ def test_reparse_generated_document(sample_template, tmp_path):
     structure = parse_template(out)
     assert "client_name" not in structure.placeholder_keys()
     assert not structure.section("s01").is_empty
+
+
+def test_template_xml_parser_does_not_resolve_external_entities(tmp_path):
+    """Uploaded templates are untrusted: an XXE payload must not pull in local files."""
+    from lxml import etree
+
+    from document_engine.formatting_preserver import _SAFE_XML_PARSER
+
+    secret = tmp_path / "secret.txt"
+    secret.write_text("TOP-SECRET-MARKER", encoding="utf-8")
+    payload = (
+        '<?xml version="1.0"?>'
+        f'<!DOCTYPE d [<!ENTITY xxe SYSTEM "{secret.as_uri()}">]>'
+        "<d><t>&xxe;</t></d>"
+    ).encode()
+    root = etree.fromstring(payload, _SAFE_XML_PARSER)
+    assert "TOP-SECRET-MARKER" not in etree.tostring(root).decode()

@@ -36,11 +36,9 @@ class ScriptedModel(Model):
     def get_config(self) -> dict[str, Any]:
         return self.config
 
-    async def structured_output(
-        self, output_model, prompt, system_prompt=None, **kwargs
-    ):
+    def structured_output(self, output_model, prompt, system_prompt=None, **kwargs):
+        """Not used: DocsGen agents request structured output when the agent is invoked."""
         raise NotImplementedError("Agents use structured_output_model on invocation.")
-        yield  # pragma: no cover
 
     @staticmethod
     def _tool_uses(messages: list) -> list[dict]:

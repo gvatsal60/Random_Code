@@ -35,6 +35,12 @@ _RSID_ATTR = re.compile(r'\s+w:rsid\w*="[^"]*"')
 
 
 # ----------------------------------------------------------------------------- traversal
+# Uploaded templates are untrusted: never resolve entities or fetch anything over the network.
+_SAFE_XML_PARSER = etree.XMLParser(
+    resolve_entities=False, no_network=True, huge_tree=False
+)
+
+
 def iter_body_blocks(body: etree._Element) -> Iterator[etree._Element]:
     """Yield top-level block elements (paragraphs, tables, content controls) in document order."""
     for child in body.iterchildren():
@@ -293,8 +299,8 @@ def snapshot(path: Path | str) -> FormattingSnapshot:
                 data = zf.read(name)
                 snap.part_hashes[name] = _hash(data)
                 if "header" in name or "footer" in name:
-                    header_footer_roots.append(etree.fromstring(data))
-        body = etree.fromstring(zf.read("word/document.xml"))
+                    header_footer_roots.append(etree.fromstring(data, _SAFE_XML_PARSER))
+        body = etree.fromstring(zf.read("word/document.xml"), _SAFE_XML_PARSER)
     for root in header_footer_roots:
         snap.drawings += sum(1 for _ in root.iter(qn("w:drawing"), qn("w:pict")))
         snap.hyperlinks += sum(1 for _ in root.iter(qn("w:hyperlink")))

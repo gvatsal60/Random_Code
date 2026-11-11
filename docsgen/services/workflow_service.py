@@ -249,7 +249,8 @@ class WorkflowService:
     def resolve_targets(self, state: WorkflowState, ctx: DocumentContext) -> list[str]:
         """Targets for the generator, formatted as section ids and placeholder keys."""
         structure = ctx.template
-        assert structure is not None
+        if structure is None:
+            raise WorkflowError("Upload a DOCX template first.")
         task = state.task_type
         placeholder_keys = structure.placeholder_keys()
         sections = [s.section_id for s in fillable_sections(structure)]
@@ -344,7 +345,8 @@ class WorkflowService:
         allowed: set[str],
     ) -> list[str]:
         structure = ctx.template
-        assert structure is not None
+        if structure is None:
+            raise WorkflowError("Upload a DOCX template first.")
         facts = {
             f.fact_id: f for f in (state.extraction.facts if state.extraction else [])
         }
@@ -625,7 +627,8 @@ class WorkflowService:
             )
             return
         # Free-standing summary: use the generator on the first fillable section as a scratch target.
-        assert ctx.template is not None
+        if ctx.template is None:
+            raise WorkflowError("Upload a DOCX template first.")
         sections = fillable_sections(ctx.template)
         if not sections:
             raise WorkflowError(
@@ -651,7 +654,8 @@ class WorkflowService:
         ctx: DocumentContext,
         include_placeholders: bool = False,
     ) -> None:
-        assert ctx.template is not None
+        if ctx.template is None:
+            raise WorkflowError("Upload a DOCX template first.")
         targets = (
             set(self.resolve_targets(state, ctx))
             if state.task_type == TaskType.IMPROVE_QUALITY
