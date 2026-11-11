@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import streamlit as st
+
 from document_engine.template_parser import parse_template
 from services.container import ServiceContainer, UploadedTemplate
 from services.extraction_service import ExtractionError
-from services.file_service import (ALLOWED_SOURCE_TYPES,
-                                   ALLOWED_TEMPLATE_TYPES, UploadRejected)
+from services.file_service import (
+    ALLOWED_SOURCE_TYPES,
+    ALLOWED_TEMPLATE_TYPES,
+    UploadRejected,
+)
 from services.security import sanitize_error
 from ui.components import flash, goto_button, page_header, show_flashes
 from ui.document_preview import render_source, render_template_structure
@@ -18,14 +22,14 @@ def _uploader_key(name: str) -> str:
 
 
 def _reset_uploader(name: str) -> None:
-    st.session_state[f"{name}_gen"] = st.session_state.get(
-        f"{name}_gen", 0) + 1
+    st.session_state[f"{name}_gen"] = st.session_state.get(f"{name}_gen", 0) + 1
 
 
 def render_template(c: ServiceContainer) -> None:
     page_header(
         "Document Template",
-        "Upload the Word template to populate. DocsGen fills this file in place and preserves its formatting.",
+        "Upload the Word template to populate. DocsGen fills this file in place and"
+        " preserves its formatting.",
         "📄",
     )
     show_flashes()
@@ -34,7 +38,9 @@ def render_template(c: ServiceContainer) -> None:
         "DOCX template",
         type=sorted(ALLOWED_TEMPLATE_TYPES),
         key=_uploader_key("tpl_upload"),
-        help=f"Maximum {c.settings.max_upload_mb} MB. Macro-enabled files are rejected.",
+        help=(
+            f"Maximum {c.settings.max_upload_mb} MB. Macro-enabled files are rejected."
+        ),
     )
     if uploaded is not None:
         try:
@@ -45,8 +51,7 @@ def render_template(c: ServiceContainer) -> None:
         except UploadRejected as exc:
             st.error(str(exc))
         except Exception as exc:  # noqa: BLE001
-            st.error(
-                f"The template could not be analyzed: {sanitize_error(exc)}")
+            st.error(f"The template could not be analyzed: {sanitize_error(exc)}")
         else:
             if current is not None:
                 c.files.delete(current.path)
@@ -64,7 +69,8 @@ def render_template(c: ServiceContainer) -> None:
     current = c.session.template
     if current is None:
         st.info(
-            "No template uploaded yet. Try `sample_data/sample_template.docx` from the project folder."
+            "No template uploaded yet. Try `sample_data/sample_template.docx` from the"
+            " project folder."
         )
         return
     top = st.columns([4, 1, 1])
@@ -84,7 +90,8 @@ def render_template(c: ServiceContainer) -> None:
 def render_sources(c: ServiceContainer) -> None:
     page_header(
         "Source Documents",
-        "Upload the documents the agents should extract information from (DOCX, PDF, TXT, XLSX, XLS, CSV).",
+        "Upload the documents the agents should extract information from (DOCX, PDF,"
+        " TXT, XLSX, XLS, CSV).",
         "📚",
     )
     show_flashes()
@@ -93,20 +100,23 @@ def render_sources(c: ServiceContainer) -> None:
         type=sorted(ALLOWED_SOURCE_TYPES),
         accept_multiple_files=True,
         key=_uploader_key("src_upload"),
-        help=f"Up to {c.settings.max_source_files} files, {c.settings.max_upload_mb} MB each.",
+        help=(
+            f"Up to {c.settings.max_source_files} files, {c.settings.max_upload_mb} MB"
+            " each."
+        ),
     )
     if uploads:
         added, errors = [], []
         for uploaded in uploads:
             if len(c.session.sources) >= c.settings.max_source_files:
                 errors.append(
-                    f"{uploaded.name}: the limit of {c.settings.max_source_files} files was reached."
+                    f"{uploaded.name}: the limit of {c.settings.max_source_files} files"
+                    " was reached."
                 )
                 continue
             data = uploaded.getvalue()
             try:
-                stored = c.files.store(
-                    uploaded.name, data, ALLOWED_SOURCE_TYPES)
+                stored = c.files.store(uploaded.name, data, ALLOWED_SOURCE_TYPES)
                 if any(d.sha256 == stored.sha256 for d in c.session.sources.values()):
                     c.files.delete(stored.path)
                     errors.append(f"{uploaded.name}: already uploaded.")
@@ -127,17 +137,20 @@ def render_sources(c: ServiceContainer) -> None:
 
     if not c.session.sources:
         st.info(
-            "No source documents yet. Sample files are in `sample_data/` (source text, budget CSV/XLSX, specification PDF, company profile DOCX)."
+            "No source documents yet. Sample files are in `sample_data/` (source text,"
+            " budget CSV/XLSX, specification PDF, company profile DOCX)."
         )
         return
     total_chars = sum(len(d.text) for d in c.session.sources.values())
     st.caption(
-        f"{len(c.session.sources)} document(s), {total_chars:,} characters extracted. Agents receive up to {c.settings.agent_context_chars:,} characters directly and can read the rest with tools."
+        f"{len(c.session.sources)} document(s), {total_chars:,} characters extracted."
+        f" Agents receive up to {c.settings.agent_context_chars:,} characters directly"
+        " and can read the rest with tools."
     )
     for doc in list(c.session.sources.values()):
         with st.expander(
-            f"{doc.doc_id} · {doc.file_name} ({doc.file_type.upper()}, {doc.size_bytes / 1024:.0f} KB)"
-            + (" ⚠️" if doc.warnings else "")
+            f"{doc.doc_id} · {doc.file_name} ({doc.file_type.upper()},"
+            f" {doc.size_bytes / 1024:.0f} KB)" + (" ⚠️" if doc.warnings else "")
         ):
             render_source(doc)
             if st.button("Remove document", key=f"rm_src_{doc.doc_id}"):

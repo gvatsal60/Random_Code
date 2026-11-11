@@ -12,8 +12,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Generic, TypeVar
 
-from models.agent_models import AGENT_LABELS, AgentRole
 from pydantic import BaseModel
+
+from models.agent_models import AGENT_LABELS, AgentRole
 
 T = TypeVar("T", bound=BaseModel)
 

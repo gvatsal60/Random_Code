@@ -18,12 +18,13 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from pydantic import BaseModel
+from strands import Agent
+
 from agents import AGENT_SPECS
 from models.agent_models import AgentRole, AgentRunRecord
-from pydantic import BaseModel
 from services.llm_service import LLMService
 from services.security import SECURITY_PREAMBLE, sanitize_error
-from strands import Agent
 from tools.context import DocumentContext
 from tools.registry import ToolDescriptor, ToolRegistry
 
@@ -114,8 +115,7 @@ class AgentManager:
             return agent(
                 prompt,
                 structured_output_model=spec.output_model,
-                limits={"turns": MAX_TURNS[role],
-                        "structured_output_attempts": 3},
+                limits={"turns": MAX_TURNS[role], "structured_output_attempts": 3},
                 cancel_signal=cancel,
             )
 
@@ -131,8 +131,7 @@ class AgentManager:
             raise AgentRunError(record.error, record) from exc
         except Exception as exc:
             record.error = sanitize_error(exc)
-            raise AgentRunError(
-                f"{spec.label} failed: {record.error}", record) from exc
+            raise AgentRunError(f"{spec.label} failed: {record.error}", record) from exc
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
             record.duration_ms = int((time.monotonic() - started) * 1000)
@@ -140,7 +139,10 @@ class AgentManager:
 
         output = getattr(result, "structured_output", None)
         if output is None:
-            record.error = f"{spec.label} did not return structured output (stop reason: {getattr(result, 'stop_reason', 'unknown')})."
+            record.error = (
+                f"{spec.label} did not return structured output (stop reason:"
+                f" {getattr(result, 'stop_reason', 'unknown')})."
+            )
             raise AgentRunError(record.error, record)
         record.ok = True
         logger.info(

@@ -9,7 +9,10 @@ from tools.context import DocumentContext
 
 SPEC = AgentSpec(
     role=AgentRole.DOCUMENT_ANALYZER,
-    description="Analyzes the DOCX template: sections, tables, placeholders and the information each part requires.",
+    description=(
+        "Analyzes the DOCX template: sections, tables, placeholders and the information"
+        " each part requires."
+    ),
     output_model=TemplateAnalysis,
     system_prompt="""\
 You are the Document Analyzer in a document automation system.

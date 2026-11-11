@@ -5,11 +5,18 @@ from __future__ import annotations
 import difflib
 
 import streamlit as st
+
 from models.agent_models import DraftStatus, InsertMode, WorkflowStage
 from services.container import ServiceContainer
 from services.workflow_service import WorkflowService
-from ui.components import (badge, flash, goto_button, page_header,
-                           run_with_status, show_flashes)
+from ui.components import (
+    badge,
+    flash,
+    goto_button,
+    page_header,
+    run_with_status,
+    show_flashes,
+)
 
 MODE_LABELS = {
     InsertMode.AUTO: "Auto (replace instructions / empty text, otherwise append)",
@@ -21,15 +28,15 @@ MODE_LABELS = {
 def render(c: ServiceContainer) -> None:
     page_header(
         "Document Review",
-        "Nothing is written to your document until you approve it. Edit freely; every value is checked against the sources again before generation.",
+        "Nothing is written to your document until you approve it. Edit freely; every"
+        " value is checked against the sources again before generation.",
         "🔍",
     )
     show_flashes()
     state = c.session.workflow
     if state is None or not state.drafts:
         st.info("There is no generated content to review yet.")
-        goto_button("Open the agent workflow",
-                    "Agent Workflow", key="rv_go_wf")
+        goto_button("Open the agent workflow", "Agent Workflow", key="rv_go_wf")
         return
     structure = c.session.template.structure if c.session.template else None
 
@@ -69,11 +76,14 @@ def render(c: ServiceContainer) -> None:
     )
     if missing:
         with st.expander(
-            f"❓ Missing information — {sum(1 for m in missing if m.critical)} critical, {len(missing)} total",
+            f"❓ Missing information — {sum(1 for m in missing if m.critical)}"
+            f" critical, {len(missing)} total",
             expanded=any(m.critical for m in missing),
         ):
             st.caption(
-                "Answer what you can. Answers are trusted facts: placeholder answers become values directly, and section answers are used when you regenerate."
+                "Answer what you can. Answers are trusted facts: placeholder answers"
+                " become values directly, and section answers are used when you"
+                " regenerate."
             )
             with st.form("missing_form"):
                 answers = {}
@@ -95,10 +105,10 @@ def render(c: ServiceContainer) -> None:
 
     if state.validation and state.validation.issues:
         errors = [i for i in state.validation.issues if i.severity == "error"]
-        warnings = [
-            i for i in state.validation.issues if i.severity == "warning"]
+        warnings = [i for i in state.validation.issues if i.severity == "warning"]
         st.markdown(
-            f"**Validation:** {state.validation.completeness_score:.0f}% complete · {len(errors)} error(s) · {len(warnings)} warning(s)"
+            f"**Validation:** {state.validation.completeness_score:.0f}% complete ·"
+            f" {len(errors)} error(s) · {len(warnings)} warning(s)"
         )
     if state.extraction and state.extraction.conflicts:
         for conflict in state.extraction.conflicts:
@@ -121,8 +131,7 @@ def render(c: ServiceContainer) -> None:
     )
 
     order = (
-        {s.section_id: i for i, s in enumerate(
-            structure.sections)} if structure else {}
+        {s.section_id: i for i, s in enumerate(structure.sections)} if structure else {}
     )
     drafts = sorted(
         state.drafts.values(),
@@ -228,9 +237,11 @@ def _draft_card(c: ServiceContainer, state, draft) -> None:
                     draft.content.split(), draft.revision_suggestion.split()
                 )
                 changed = " ".join(
-                    f"~~{w[2:]}~~"
-                    if w.startswith("- ")
-                    else (f"**{w[2:]}**" if w.startswith("+ ") else w[2:])
+                    (
+                        f"~~{w[2:]}~~"
+                        if w.startswith("- ")
+                        else (f"**{w[2:]}**" if w.startswith("+ ") else w[2:])
+                    )
                     for w in diff
                     if not w.startswith("? ")
                 )
@@ -253,5 +264,4 @@ def _draft_card(c: ServiceContainer, state, draft) -> None:
                         + (f"  \n  _“{ref.excerpt}”_" if ref.excerpt else "")
                     )
             elif draft.content.strip():
-                st.caption(
-                    "No source references were attached to this content.")
+                st.caption("No source references were attached to this content.")

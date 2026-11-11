@@ -7,9 +7,10 @@ import difflib
 import json
 import re
 
+from strands import tool
+
 from document_engine.placeholder_manager import PLACEHOLDER_RE
 from models.agent_models import SectionDraft, ValidationIssue
-from strands import tool
 from tools.context import DocumentContext
 from tools.text_extraction import DATE_RE, MONEY_RE, NUMBER_RE, PERCENT_RE
 
@@ -24,8 +25,7 @@ def _normalize_number(value: str) -> str:
 
 
 def _source_numbers(ctx: DocumentContext, extra_text: str = "") -> set[str]:
-    corpus = "\n".join(d.text for d in ctx.sources.values()
-                       ) + "\n" + extra_text
+    corpus = "\n".join(d.text for d in ctx.sources.values()) + "\n" + extra_text
     found = {_normalize_number(n) for n in NUMBER_RE.findall(corpus)}
     found |= {_normalize_number(m) for m in MONEY_RE.findall(corpus)}
     # thousands written as "248k" or "USD 248,000" -> both forms
@@ -40,7 +40,8 @@ def verify_values(
         "\n".join(d.text for d in ctx.sources.values()) + "\n" + trusted_text
     ).lower()
     numbers = _source_numbers(ctx, trusted_text)
-    supported, unsupported = [], []
+    supported: list[str] = []
+    unsupported: list[str] = []
     candidates = set(MONEY_RE.findall(text)) | set(PERCENT_RE.findall(text))
     candidates |= {
         n for n in NUMBER_RE.findall(text) if len(_normalize_number(n)) >= 3 or "," in n
@@ -78,8 +79,7 @@ def readability(text: str) -> dict[str, float]:
             "avg_sentence_words": 0.0,
             "flesch_reading_ease": 0.0,
         }
-    syllables = sum(
-        max(1, len(re.findall(r"[aeiouy]+", w.lower()))) for w in words)
+    syllables = sum(max(1, len(re.findall(r"[aeiouy]+", w.lower()))) for w in words)
     asl = len(words) / len(sentences)
     asw = syllables / len(words)
     return {
@@ -118,7 +118,10 @@ def deterministic_checks(
                     severity="warning",
                     target=d.target,
                     category="placeholder",
-                    message=f"Content still contains placeholders: {', '.join(sorted(set(left)))}.",
+                    message=(
+                        "Content still contains placeholders:"
+                        f" {', '.join(sorted(set(left)))}."
+                    ),
                 )
             )
         if re.search(r"\[(?:insert|tbd|todo|missing)[^\]]*\]", content, re.IGNORECASE):
@@ -127,7 +130,9 @@ def deterministic_checks(
                     severity="warning",
                     target=d.target,
                     category="missing",
-                    message="Content contains a gap marker such as [TBD] or [Insert …].",
+                    message=(
+                        "Content contains a gap marker such as [TBD] or [Insert …]."
+                    ),
                 )
             )
         values = verify_values(content, ctx, trusted)
@@ -137,7 +142,10 @@ def deterministic_checks(
                     severity="warning",
                     target=d.target,
                     category="unsupported",
-                    message=f"Values not found in the sources or your answers: {', '.join(values['unsupported'][:10])}.",
+                    message=(
+                        "Values not found in the sources or your answers:"
+                        f" {', '.join(values['unsupported'][:10])}."
+                    ),
                     suggestion="Verify these values or remove them.",
                 )
             )
@@ -183,8 +191,7 @@ def make_find_duplicate_content(ctx: DocumentContext):
             return "sections_json must be a JSON object of {target: text}."
         dups = duplicate_sentences({str(k): str(v) for k, v in texts.items()})
         return (
-            json.dumps([{"sentence": s, "targets": t}
-                       for s, t in dups], indent=1)
+            json.dumps([{"sentence": s, "targets": t} for s, t in dups], indent=1)
             if dups
             else "No duplicated sentences found."
         )
@@ -201,8 +208,7 @@ def make_check_placeholders(ctx: DocumentContext):
             text: The text to check.
         """
         found = sorted(set(PLACEHOLDER_RE.findall(text)))
-        gaps = re.findall(
-            r"\[(?:insert|tbd|todo|missing)[^\]]*\]", text, re.IGNORECASE)
+        gaps = re.findall(r"\[(?:insert|tbd|todo|missing)[^\]]*\]", text, re.IGNORECASE)
         return json.dumps({"placeholders": found, "gap_markers": gaps})
 
     return check_remaining_placeholders

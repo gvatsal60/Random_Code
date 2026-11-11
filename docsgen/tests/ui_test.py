@@ -1,14 +1,16 @@
 """Streamlit UI tests with streamlit.testing.AppTest (headless): every page renders, and the key flows work
-through the actual widgets: provider configuration, MCP server management, review and generation."""
+through the actual widgets: provider configuration, MCP server management, review and generation.
+"""
 
 from __future__ import annotations
 
 import sys
 
 import pytest
+from streamlit.testing.v1 import AppTest
+
 from models.agent_models import TaskType
 from services.workflow_service import WorkflowService
-from streamlit.testing.v1 import AppTest
 from testkit import scripted_outputs as so
 from testkit.helpers import ScriptedModel
 from tests.conftest import ROOT, load_sources, load_template
@@ -35,8 +37,7 @@ def app(data_dir):
     at.run()
     assert not at.exception
     container = at.session_state["_docsgen_container"]
-    container.settings.stdio_command_allowlist.append(
-        sys.executable.rsplit("/", 1)[-1])
+    container.settings.stdio_command_allowlist.append(sys.executable.rsplit("/", 1)[-1])
     yield at, container
     container.shutdown()
 
@@ -76,8 +77,7 @@ def test_ai_provider_configuration_flow(app):
     at.text_input(key="ai_anthropic_secret_api_key").input(
         "sk-ant-ui-test-1234567890"
     ).run()
-    at.text_input(key="ai_anthropic_model_custom").input(
-        "claude-ui-test").run()
+    at.text_input(key="ai_anthropic_model_custom").input("claude-ui-test").run()
     button(at, "Test connection").click().run()
     assert any("Connected" in s.value for s in at.success), [
         s.value for s in at.success
@@ -131,8 +131,7 @@ def test_review_and_generation_flow(app):
     )
     from models.provider_models import ProviderConfig, ProviderId
 
-    c.llm.apply(ProviderConfig(
-        provider=ProviderId.OPENAI, model_id="scripted"))
+    c.llm.apply(ProviderConfig(provider=ProviderId.OPENAI, model_id="scripted"))
     state = WorkflowService.new_state(TaskType.GENERATE_COMPLETE, "Fill it.")
     c.session.workflow = state
     c.workflow.run_pipeline(state, c.document_context())
@@ -160,8 +159,7 @@ def test_workflow_page_runs_pipeline(app):
     )
     from models.provider_models import ProviderConfig, ProviderId
 
-    c.llm.apply(ProviderConfig(
-        provider=ProviderId.OPENAI, model_id="scripted"))
+    c.llm.apply(ProviderConfig(provider=ProviderId.OPENAI, model_id="scripted"))
     goto(at, "Agent Workflow")
     button(at, "▶ Run complete workflow").click().run()
     assert not at.exception, [e.value for e in at.exception]

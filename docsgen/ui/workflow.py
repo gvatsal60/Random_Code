@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import streamlit as st
-from models.agent_models import (AGENT_LABELS, STAGE_ORDER, TASK_LABELS,
-                                 WRITING_TASKS, AgentRole, TaskType,
-                                 WorkflowStage)
+
+from models.agent_models import (
+    AGENT_LABELS,
+    STAGE_ORDER,
+    TASK_LABELS,
+    WRITING_TASKS,
+    AgentRole,
+    TaskType,
+    WorkflowStage,
+)
 from services.container import ServiceContainer
 from services.workflow_service import WorkflowService
-from ui.components import (badge, goto_button, page_header, run_with_status,
-                           show_flashes)
+from ui.components import badge, goto_button, page_header, run_with_status, show_flashes
 
 STEP_LABELS = {
     WorkflowStage.NOT_STARTED: "Not started",
@@ -44,7 +52,8 @@ def _new_state(c: ServiceContainer):
 def render(c: ServiceContainer) -> None:
     page_header(
         "Agent Workflow",
-        "Run the Strands agents. Every agent uses the AI provider currently applied and only the tools it is authorized to use.",
+        "Run the Strands agents. Every agent uses the AI provider currently applied and"
+        " only the tools it is authorized to use.",
         "🤖",
     )
     show_flashes()
@@ -62,10 +71,14 @@ def render(c: ServiceContainer) -> None:
     ready_src = bool(c.session.sources) or not needs_sources
     r = st.columns(4)
     r[0].markdown(
-        f"**AI provider**  \n{badge('Ready' if ready_llm else 'Missing', 'ok' if ready_llm else 'error')} {c.llm.describe()}"
+        "**AI provider** "
+        f" \n{badge('Ready' if ready_llm else 'Missing', 'ok' if ready_llm else 'error')}"
+        f" {c.llm.describe()}"
     )
     r[1].markdown(
-        f"**Template**  \n{badge('Ready' if ready_tpl else 'Missing', 'ok' if ready_tpl else 'error')} {c.session.template.file_name if ready_tpl else ''}"
+        "**Template** "
+        f" \n{badge('Ready' if ready_tpl else 'Missing', 'ok' if ready_tpl else 'error')}"
+        f" {c.session.template.file_name if c.session.template else ''}"
     )
     sources_badge = badge(
         f"{len(c.session.sources)} file(s)", "ok" if ready_src else "error"
@@ -77,11 +90,9 @@ def render(c: ServiceContainer) -> None:
             "Configure the AI provider", "AI Provider Configuration", key="wf_go_ai"
         )
     if not ready_tpl:
-        goto_button("Upload a template",
-                    "Document Template Upload", key="wf_go_tpl")
+        goto_button("Upload a template", "Document Template Upload", key="wf_go_tpl")
     if needs_sources and not c.session.sources:
-        goto_button("Upload source documents",
-                    "Source Documents", key="wf_go_src")
+        goto_button("Upload source documents", "Source Documents", key="wf_go_src")
 
     with st.expander("Agents and their authorized tools"):
         cols = st.columns(3)
@@ -98,12 +109,12 @@ def render(c: ServiceContainer) -> None:
     if b[0].button(
         "▶ Run complete workflow", type="primary", disabled=not can_run, width="stretch"
     ):
-        state = _new_state(c)
-        c.session.workflow = state
+        new_state = _new_state(c)
+        c.session.workflow = new_state
         run_with_status(
             "Running agents",
             lambda progress: c.workflow.run_pipeline(
-                state, c.document_context(), progress
+                new_state, c.document_context(), progress
             ),
         )
         st.rerun()
@@ -124,13 +135,11 @@ def render(c: ServiceContainer) -> None:
         step_defs = [
             (
                 "1 · Analyze template",
-                lambda s, p: c.workflow.analyze_template(
-                    s, c.document_context(), p),
+                lambda s, p: c.workflow.analyze_template(s, c.document_context(), p),
             ),
             (
                 "2 · Extract",
-                lambda s, p: c.workflow.extract_information(
-                    s, c.document_context(), p),
+                lambda s, p: c.workflow.extract_information(s, c.document_context(), p),
             ),
             (
                 "3 · Research",
@@ -138,8 +147,7 @@ def render(c: ServiceContainer) -> None:
             ),
             (
                 "4 · Generate",
-                lambda s, p: c.workflow.generate(
-                    s, c.document_context(), progress=p),
+                lambda s, p: c.workflow.generate(s, c.document_context(), progress=p),
             ),
             (
                 "5 · Validate",
@@ -147,8 +155,7 @@ def render(c: ServiceContainer) -> None:
             ),
             (
                 "6 · Quality review",
-                lambda s, p: c.workflow.quality_review(
-                    s, c.document_context(), p),
+                lambda s, p: c.workflow.quality_review(s, c.document_context(), p),
             ),
         ]
         for col, (label, fn) in zip(steps, step_defs):
@@ -158,11 +165,13 @@ def render(c: ServiceContainer) -> None:
                 if c.session.workflow is None:
                     c.session.workflow = _new_state(c)
                 current = c.session.workflow
-                run_with_status(
-                    label,
-                    lambda progress, fn=fn, current=current: fn(
-                        current, progress),
-                )
+
+                def _run_step(
+                    progress: Any, fn: Any = fn, current: Any = current
+                ) -> Any:
+                    return fn(current, progress)
+
+                run_with_status(label, _run_step)
                 st.rerun()
 
     state = c.session.workflow
@@ -198,11 +207,9 @@ def render(c: ServiceContainer) -> None:
 
     with st.expander("Event log", expanded=False):
         for e in reversed(state.events):
-            icon = {"success": "✅", "warning": "⚠️",
-                    "error": "❌"}.get(e.level, "ℹ️")
+            icon = {"success": "✅", "warning": "⚠️", "error": "❌"}.get(e.level, "ℹ️")
             who = f" [{AGENT_LABELS[e.agent]}]" if e.agent else ""
-            st.markdown(
-                f"{icon} `{e.at:%H:%M:%S}` **{e.step}**{who} — {e.message}")
+            st.markdown(f"{icon} `{e.at:%H:%M:%S}` **{e.step}**{who} — {e.message}")
         if state.agent_runs:
             st.dataframe(
                 [
@@ -242,15 +249,15 @@ def _results(c: ServiceContainer, state) -> None:
             )
             if state.template_analysis.placeholders:
                 st.dataframe(
-                    [p.model_dump()
-                     for p in state.template_analysis.placeholders],
+                    [p.model_dump() for p in state.template_analysis.placeholders],
                     hide_index=True,
                     width="stretch",
                 )
     if state.extraction:
         ex = state.extraction
         with st.expander(
-            f"Extracted information — {len(ex.facts)} facts, {len(ex.missing)} gaps, {len(ex.conflicts)} conflicts"
+            f"Extracted information — {len(ex.facts)} facts, {len(ex.missing)} gaps,"
+            f" {len(ex.conflicts)} conflicts"
         ):
             st.dataframe(
                 [
@@ -280,7 +287,8 @@ def _results(c: ServiceContainer, state) -> None:
         with st.expander("Research"):
             for f in state.research.findings:
                 st.markdown(
-                    f"- {'✅ verified' if f.verified else '❔ unverified'} — {f.statement}"
+                    f"- {'✅ verified' if f.verified else '❔ unverified'} —"
+                    f" {f.statement}"
                     + (
                         f" ([{f.citation_title or 'source'}]({f.citation_url}))"
                         if f.citation_url
@@ -292,7 +300,8 @@ def _results(c: ServiceContainer, state) -> None:
     if state.validation:
         v = state.validation
         with st.expander(
-            f"Validation — {v.completeness_score:.0f}% complete, {len(v.issues)} issue(s)"
+            f"Validation — {v.completeness_score:.0f}% complete, {len(v.issues)}"
+            " issue(s)"
         ):
             st.write(v.summary)
             st.dataframe(
@@ -301,7 +310,8 @@ def _results(c: ServiceContainer, state) -> None:
     if state.quality:
         q = state.quality
         with st.expander(
-            f"Quality review — score {q.overall_score:.0f}/100, {len(q.revisions)} suggestion(s)"
+            f"Quality review — score {q.overall_score:.0f}/100, {len(q.revisions)}"
+            " suggestion(s)"
         ):
             st.write(q.summary)
             for label, text in (

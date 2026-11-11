@@ -3,15 +3,29 @@
 from __future__ import annotations
 
 from agents.base import GROUNDING_RULES, AgentSpec
-from agents.prompting import (compact_json, sources_digest, task_block,
-                              template_digest, user_answers_block)
-from models.agent_models import (AgentRole, ExtractionResult, GenerationResult,
-                                 ResearchResult, TaskType, TemplateAnalysis)
+from agents.prompting import (
+    compact_json,
+    sources_digest,
+    task_block,
+    template_digest,
+    user_answers_block,
+)
+from models.agent_models import (
+    AgentRole,
+    ExtractionResult,
+    GenerationResult,
+    ResearchResult,
+    TaskType,
+    TemplateAnalysis,
+)
 from tools.context import DocumentContext
 
 SPEC = AgentSpec(
     role=AgentRole.DOCUMENT_GENERATOR,
-    description="Generates section content and placeholder values that follow the template's style, using only extracted facts.",
+    description=(
+        "Generates section content and placeholder values that follow the template's"
+        " style, using only extracted facts."
+    ),
     output_model=GenerationResult,
     system_prompt=f"""\
 You are the Document Generation agent in a document automation system.
@@ -55,15 +69,15 @@ def build_prompt(
     if analysis is not None:
         parts += ["TEMPLATE REQUIREMENTS:", compact_json(analysis, 10_000)]
     if extraction is not None:
-        parts += ["EXTRACTED FACTS AND MAPPINGS:",
-                  compact_json(extraction, 20_000)]
+        parts += ["EXTRACTED FACTS AND MAPPINGS:", compact_json(extraction, 20_000)]
     if research is not None and research.performed:
         parts += ["RESEARCH FINDINGS:", compact_json(research, 6_000)]
     if answers:
         parts.append(user_answers_block(answers))
     if existing_content:
         parts.append(
-            "EXISTING CONTENT TO REWRITE OR IMPROVE (keep all facts, do not add new ones):"
+            "EXISTING CONTENT TO REWRITE OR IMPROVE (keep all facts, do not add new"
+            " ones):"
         )
         parts += [f"[{k}]\n{v[:6000]}" for k, v in existing_content.items()]
     parts += [
@@ -71,6 +85,7 @@ def build_prompt(
         sources_digest(ctx, budget // 2),
     ]
     parts.append(
-        f"Generate content for exactly these targets: {', '.join(targets)}. Return the GenerationResult."
+        f"Generate content for exactly these targets: {', '.join(targets)}. Return the"
+        " GenerationResult."
     )
     return "\n\n".join(parts)

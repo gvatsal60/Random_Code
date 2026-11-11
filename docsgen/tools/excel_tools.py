@@ -8,10 +8,15 @@ import math
 from pathlib import Path
 
 import pandas as pd
-from models.document_models import (ExtractedTable, SourceChunk,
-                                    SourceDocument, SourceRef)
-from services.security import wrap_untrusted
 from strands import tool
+
+from models.document_models import (
+    ExtractedTable,
+    SourceChunk,
+    SourceDocument,
+    SourceRef,
+)
+from services.security import wrap_untrusted
 from tools.context import DocumentContext
 from tools.text_extraction import extract_entities
 
@@ -28,10 +33,8 @@ def _cell(value) -> str:
 
 
 def frame_to_rows(df: pd.DataFrame) -> tuple[list[str], list[list[str]]]:
-    columns = [_cell(c) if not str(c).startswith(
-        "Unnamed") else "" for c in df.columns]
-    rows = [[_cell(v) for v in row]
-            for row in df.itertuples(index=False, name=None)]
+    columns = [_cell(c) if not str(c).startswith("Unnamed") else "" for c in df.columns]
+    rows = [[_cell(v) for v in row] for row in df.itertuples(index=False, name=None)]
     return columns, rows
 
 
@@ -43,12 +46,11 @@ def sheet_chunks(
     rows: list[list[str]],
     start_index: int,
 ) -> list[SourceChunk]:
-    chunks = []
+    chunks: list[SourceChunk] = []
     header = " | ".join(columns)
     for i in range(0, max(len(rows), 1), ROWS_PER_CHUNK):
-        block = rows[i: i + ROWS_PER_CHUNK]
-        text = "\n".join([f"Sheet: {sheet}", header] +
-                         [" | ".join(r) for r in block])
+        block = rows[i : i + ROWS_PER_CHUNK]
+        text = "\n".join([f"Sheet: {sheet}", header] + [" | ".join(r) for r in block])
         cid = f"{doc_id}-C{start_index + len(chunks)}"
         # +2: header is spreadsheet row 1, first data row is row 2
         location = f"sheet '{sheet}' rows {i + 2}-{i + 1 + max(len(block), 1)}"
@@ -70,8 +72,7 @@ def extract_spreadsheet(
 ) -> SourceDocument:
     ext = path.suffix.lower()
     engine = "openpyxl" if ext == ".xlsx" else "xlrd"
-    sheets = pd.read_excel(path, sheet_name=None,
-                           engine=engine, nrows=MAX_ROWS)
+    sheets = pd.read_excel(path, sheet_name=None, engine=engine, nrows=MAX_ROWS)
     warnings: list[str] = []
     chunks: list[SourceChunk] = []
     tables: list[ExtractedTable] = []
@@ -80,18 +81,17 @@ def extract_spreadsheet(
         df = df.dropna(how="all").dropna(axis=1, how="all")
         columns, rows = frame_to_rows(df)
         if len(df) >= MAX_ROWS:
-            warnings.append(
-                f"Sheet '{name}' was truncated to {MAX_ROWS} rows.")
+            warnings.append(f"Sheet '{name}' was truncated to {MAX_ROWS} rows.")
         if ext == ".xlsx" and df.isna().any().any():
             warnings.append(
-                f"Sheet '{name}' has empty cells; formula cells without saved values appear empty."
+                f"Sheet '{name}' has empty cells; formula cells without saved values"
+                " appear empty."
             )
         new_chunks = sheet_chunks(
             doc_id, file_name, str(name), columns, rows, len(chunks) + 1
         )
         chunks.extend(new_chunks)
-        ref = SourceRef(doc_id=doc_id, file_name=file_name,
-                        location=f"sheet '{name}'")
+        ref = SourceRef(doc_id=doc_id, file_name=file_name, location=f"sheet '{name}'")
         tables.append(
             ExtractedTable(
                 name=str(name),
@@ -123,9 +123,9 @@ def extract_spreadsheet(
 def numeric_summary(table: ExtractedTable) -> dict:
     df = pd.DataFrame(
         table.rows,
-        columns=table.columns
-        if len(set(table.columns)) == len(table.columns)
-        else None,
+        columns=(
+            table.columns if len(set(table.columns)) == len(table.columns) else None
+        ),
     )
     summary = {}
     for col in df.columns:
@@ -165,19 +165,21 @@ def make_get_spreadsheet_sheet(ctx: DocumentContext):
             doc.tables[0] if len(doc.tables) == 1 else None
         )
         if table is None:
-            return f"Unknown sheet '{sheet}'. Sheets: {', '.join(t.name for t in doc.tables)}"
+            return (
+                f"Unknown sheet '{sheet}'. Sheets:"
+                f" {', '.join(t.name for t in doc.tables)}"
+            )
         start, count = max(0, int(start_row)), max(1, min(int(max_rows), 200))
         data = {
             "sheet": table.name,
             "columns": table.columns,
-            "rows": table.rows[start: start + count],
+            "rows": table.rows[start : start + count],
             "total_rows": table.total_rows,
             "first_row_number": start + 2,
         }
         return ctx.limit(
             wrap_untrusted(
-                f"{doc.file_name} {table.ref.location}", json.dumps(
-                    data, indent=1)
+                f"{doc.file_name} {table.ref.location}", json.dumps(data, indent=1)
             )
         )
 

@@ -6,8 +6,12 @@ import io
 import zipfile
 
 import pytest
-from services.file_service import (ALLOWED_SOURCE_TYPES, UploadRejected,
-                                   sniff_and_validate)
+
+from services.file_service import (
+    ALLOWED_SOURCE_TYPES,
+    UploadRejected,
+    sniff_and_validate,
+)
 from tests.conftest import SAMPLES, load_sources
 from tools.text_extraction import extract_entities, search_chunks
 
@@ -40,20 +44,18 @@ def test_all_formats_extract_with_references(container):
 
 def test_entities():
     e = extract_entities(
-        "Kick-off on 15 March 2026; budget USD 248,000 (8%). Contact a.b@example.com, Ref: NWA-2026-014. https://x.example/y"
+        "Kick-off on 15 March 2026; budget USD 248,000 (8%). Contact a.b@example.com,"
+        " Ref: NWA-2026-014. https://x.example/y"
     )
     assert "15 March 2026" in e.dates
     assert "USD 248,000" in e.money and "8%" in e.percentages
-    assert e.emails == [
-        "a.b@example.com"] and e.urls == ["https://x.example/y"]
+    assert e.emails == ["a.b@example.com"] and e.urls == ["https://x.example/y"]
     assert any("NWA-2026-014" in r for r in e.references)
 
 
 def test_search(container):
-    load_sources(container, names=(
-        "sample_source.txt", "sample_specification.pdf"))
-    hits = search_chunks(container.document_context(),
-                         "availability target reporting")
+    load_sources(container, names=("sample_source.txt", "sample_specification.pdf"))
+    hits = search_chunks(container.document_context(), "availability target reporting")
     assert hits and hits[0][1].ref.file_name == "sample_specification.pdf"
 
 
@@ -84,8 +86,7 @@ def test_macro_and_traversal_and_bomb_rejected():
     base = {"[Content_Types].xml": b"<Types/>", "word/document.xml": b"<doc/>"}
     with pytest.raises(UploadRejected, match="Macro"):
         sniff_and_validate(
-            "m.docx", _zip(
-                base | {"word/vbaProject.bin": b"x"}), {"docx"}, 10**8
+            "m.docx", _zip(base | {"word/vbaProject.bin": b"x"}), {"docx"}, 10**8
         )
     with pytest.raises(UploadRejected, match="unsafe"):
         sniff_and_validate(

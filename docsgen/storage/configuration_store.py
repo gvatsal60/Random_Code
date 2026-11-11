@@ -32,8 +32,7 @@ class ConfigurationStore:
 
     def __init__(self, path: Path) -> None:
         self.path = path
-        self._lock = self._locks.setdefault(
-            str(path.resolve()), threading.Lock())
+        self._lock = self._locks.setdefault(str(path.resolve()), threading.Lock())
 
     def load(self) -> dict[str, Any]:
         with self._lock:
@@ -45,8 +44,7 @@ class ConfigurationStore:
         try:
             return json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
-            logger.warning(
-                "Configuration file is unreadable; starting with defaults.")
+            logger.warning("Configuration file is unreadable; starting with defaults.")
             return {}
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -61,8 +59,7 @@ class ConfigurationStore:
 
     def _save_unlocked(self, data: dict[str, Any]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        fd, tmp = tempfile.mkstemp(
-            dir=self.path.parent, prefix=".cfg-", suffix=".json")
+        fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=".cfg-", suffix=".json")
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump(data, fh, indent=2, default=str, sort_keys=True)
         os.chmod(tmp, 0o600)
@@ -82,7 +79,8 @@ class ConfigurationStore:
                     and key not in {"secret_env_keys", "secret_header_names"}
                 ):
                     raise ValueError(
-                        f"Refusing to store secret-like value '{path}.{k}' in plain configuration."
+                        f"Refusing to store secret-like value '{path}.{k}' in plain"
+                        " configuration."
                     )
                 ConfigurationStore._assert_no_secrets(v, f"{path}.{k}")
         elif isinstance(value, list):

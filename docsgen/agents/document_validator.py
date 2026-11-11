@@ -5,15 +5,28 @@ from __future__ import annotations
 import json
 
 from agents.base import AgentSpec
-from agents.prompting import (compact_json, task_block, template_digest,
-                              user_answers_block)
-from models.agent_models import (AgentRole, ExtractionResult, SectionDraft,
-                                 TaskType, ValidationIssue, ValidationReport)
+from agents.prompting import (
+    compact_json,
+    task_block,
+    template_digest,
+    user_answers_block,
+)
+from models.agent_models import (
+    AgentRole,
+    ExtractionResult,
+    SectionDraft,
+    TaskType,
+    ValidationIssue,
+    ValidationReport,
+)
 from tools.context import DocumentContext
 
 SPEC = AgentSpec(
     role=AgentRole.DOCUMENT_VALIDATOR,
-    description="Checks completeness, missing information, inconsistencies, numbers and dates, duplicated content and support in the sources.",
+    description=(
+        "Checks completeness, missing information, inconsistencies, numbers and dates,"
+        " duplicated content and support in the sources."
+    ),
     output_model=ValidationReport,
     system_prompt="""\
 You are the Document Validation agent in a document automation system.

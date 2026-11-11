@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import streamlit as st
+
 from services.container import ServiceContainer
 from services.security import sanitize_error
 from ui.components import confirm_button, flash, page_header, show_flashes
@@ -11,7 +12,8 @@ from ui.components import confirm_button, flash, page_header, show_flashes
 def render(c: ServiceContainer) -> None:
     page_header(
         "Application Settings",
-        "Limits, timeouts and security policies. Saved settings apply to all sessions of this installation.",
+        "Limits, timeouts and security policies. Saved settings apply to all sessions"
+        " of this installation.",
         "⚙️",
     )
     show_flashes()
@@ -63,7 +65,10 @@ def render(c: ServiceContainer) -> None:
         allowlist = st.text_input(
             "Allowed stdio commands (comma separated)",
             ", ".join(s.stdio_command_allowlist),
-            help="MCP stdio servers may only start these executables. Shell interpreters are always refused.",
+            help=(
+                "MCP stdio servers may only start these executables. Shell interpreters"
+                " are always refused."
+            ),
         )
         r = st.columns(2)
         http_local = r[0].toggle(
@@ -115,8 +120,8 @@ def render(c: ServiceContainer) -> None:
     st.markdown("#### Stored credentials")
     keys = c.credential_store.keys()
     st.caption(
-        f"{len(keys)} credential(s) available to this session (names only, values are never shown): "
-        + (", ".join(keys) if keys else "none")
+        f"{len(keys)} credential(s) available to this session (names only, values are"
+        " never shown): " + (", ".join(keys) if keys else "none")
     )
     if confirm_button(
         "Delete all saved credentials",
@@ -129,7 +134,9 @@ def render(c: ServiceContainer) -> None:
 
     st.markdown("#### Storage")
     st.code(
-        f"Data directory: {s.data_dir}\nConfiguration:  {s.config_file.name}\nCredentials:    {s.credentials_file.name} (Fernet-encrypted)\nGenerated docs: {s.generated_dir}",
+        f"Data directory: {s.data_dir}\nConfiguration: "
+        f" {s.config_file.name}\nCredentials:    {s.credentials_file.name}"
+        f" (Fernet-encrypted)\nGenerated docs: {s.generated_dir}",
         language="text",
     )
     if confirm_button(

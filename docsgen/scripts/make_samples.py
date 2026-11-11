@@ -172,13 +172,13 @@ def build_template(path: Path) -> None:
     doc.add_heading("1. Executive Summary", level=1)
     instruction(
         doc,
-        "[Insert a concise executive summary of the proposal: the problem, the solution, cost and timeline.]",
+        "[Insert a concise executive summary of the proposal: the problem, the"
+        " solution, cost and timeline.]",
     )
 
     doc.add_heading("2. Introduction", level=1)
     p = doc.add_paragraph("More information is available on the ")
-    add_hyperlink(p, "https://example.com/about",
-                  ["{{company", "_name}} website"])
+    add_hyperlink(p, "https://example.com/about", ["{{company", "_name}} website"])
     p.add_run(".")
     instruction(
         doc, "Describe the purpose of this document and the organizations involved."
@@ -320,17 +320,19 @@ def build_sources() -> None:
         fontsize=14,
     )
     body = (
-        "1. Data sources: point-of-sale (nightly export), e-commerce platform (REST API), loyalty app (database).\n"
-        "2. Availability target: 99.5% monthly for the reporting layer.\n"
-        "3. Security: encryption at rest (AES-256) and in transit (TLS 1.2+). Access via single sign-on.\n"
-        "4. Retention: raw data kept for 24 months."
+        "1. Data sources: point-of-sale (nightly export), e-commerce platform (REST"
+        " API), loyalty app (database).\n2. Availability target: 99.5% monthly for the"
+        " reporting layer.\n3. Security: encryption at rest (AES-256) and in transit"
+        " (TLS 1.2+). Access via single sign-on.\n4. Retention: raw data kept for 24"
+        " months."
     )
     page.insert_textbox(fitz.Rect(72, 100, 540, 400), body, fontsize=11)
     page2 = pdf.new_page()
     page2.insert_text((72, 72), "Appendix: Service levels", fontsize=12)
     page2.insert_textbox(
         fitz.Rect(72, 100, 540, 300),
-        "Incident response within 4 business hours.\nSupport contract: 12 months after go-live.",
+        "Incident response within 4 business hours.\nSupport contract: 12 months after"
+        " go-live.",
         fontsize=11,
     )
     pdf.save(OUT / "sample_specification.pdf")
@@ -338,7 +340,8 @@ def build_sources() -> None:
     profile = docx.Document()
     profile.add_heading("Northwind Analytics Ltd. — Company Profile", level=1)
     profile.add_paragraph(
-        "Founded in 2014 in Manchester, Northwind Analytics has 85 employees and specializes in data platforms for retail and logistics."
+        "Founded in 2014 in Manchester, Northwind Analytics has 85 employees and"
+        " specializes in data platforms for retail and logistics."
     )
     profile.add_paragraph("Contact: delivery@northwind.example")
     profile.save(OUT / "sample_company_profile.docx")

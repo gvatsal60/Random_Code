@@ -39,7 +39,7 @@ files in `sample_data/` as sources.
 
 ## Architecture
 
-```
+```text
 app.py                        Streamlit entry point + sidebar navigation (12 modules)
 config.py                     Settings (defaults → secrets → DOCSGEN_* env → saved overrides), logging with redaction
 ui/                           One module per page; no business logic

@@ -5,12 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import streamlit as st
+
 from models.agent_models import WRITING_TASKS, WorkflowStage
 from models.document_models import GenerationRecord
 from services.container import ServiceContainer
 from services.workflow_service import WorkflowService
-from ui.components import (badge, goto_button, page_header, run_with_status,
-                           show_flashes)
+from ui.components import badge, goto_button, page_header, run_with_status, show_flashes
 
 DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
@@ -27,15 +27,15 @@ def _read(path: str | None) -> bytes:
 def render_generation(c: ServiceContainer) -> None:
     page_header(
         "Document Generation",
-        "Populate the original template with the approved content and download the result.",
+        "Populate the original template with the approved content and download the"
+        " result.",
         "🏗️",
     )
     show_flashes()
     state = c.session.workflow
     if state is None:
         st.info("Run the agent workflow first.")
-        goto_button("Open the agent workflow",
-                    "Agent Workflow", key="gen_go_wf")
+        goto_button("Open the agent workflow", "Agent Workflow", key="gen_go_wf")
         return
 
     if state.task_type not in WRITING_TASKS or (
@@ -46,7 +46,8 @@ def render_generation(c: ServiceContainer) -> None:
 
     approved = state.approved_drafts
     st.markdown(
-        f"**Approved items:** {len(approved)} of {len(state.drafts)}  ·  **Template:** {c.session.template.file_name if c.session.template else '—'}"
+        f"**Approved items:** {len(approved)} of {len(state.drafts)}  ·  **Template:**"
+        f" {c.session.template.file_name if c.session.template else '—'}"
     )
     if not approved:
         st.warning(
@@ -90,8 +91,7 @@ def render_generation(c: ServiceContainer) -> None:
 
 
 def _record_details(record: GenerationRecord, state) -> None:
-    st.success(
-        f"Generated **{record.file_name}** · {record.validation_summary}")
+    st.success(f"Generated **{record.file_name}** · {record.validation_summary}")
     d = st.columns(3)
     d[0].download_button(
         "⬇️ Download DOCX",
@@ -148,8 +148,7 @@ def _record_details(record: GenerationRecord, state) -> None:
         )
     with t2:
         st.markdown(
-            "**Sections written:** " +
-            (", ".join(wr.sections_written) or "none")
+            "**Sections written:** " + (", ".join(wr.sections_written) or "none")
         )
         st.markdown(
             "**Placeholders replaced:** "
@@ -189,13 +188,15 @@ def _record_details(record: GenerationRecord, state) -> None:
         cmp = record.comparison
         if cmp:
             st.caption(
-                f"Blocks: {cmp.original_blocks} → {cmp.generated_blocks} · added {cmp.added} · removed {cmp.removed} · modified {cmp.modified} · unchanged {cmp.unchanged}"
+                f"Blocks: {cmp.original_blocks} → {cmp.generated_blocks} · added"
+                f" {cmp.added} · removed {cmp.removed} · modified {cmp.modified} ·"
+                f" unchanged {cmp.unchanged}"
             )
             for diff in cmp.diffs[:80]:
                 cols = st.columns(2)
-                cols[0].markdown(
-                    f"{'~~' if diff.change == 'removed' else ''}{diff.original[:500] or '—'}{'~~' if diff.change == 'removed' else ''}"
-                )
+                strike = "~~" if diff.change == "removed" else ""
+                original = diff.original[:500] or "—"
+                cols[0].markdown(f"{strike}{original}{strike}")
                 cols[1].markdown(
                     f"**{diff.generated[:500]}**" if diff.change != "removed" else "—"
                 )
@@ -303,7 +304,8 @@ def render_history(c: ServiceContainer) -> None:
                 1 for chk in r.write_report.format_checks if chk.status == "preserved"
             )
             st.caption(
-                f"Formatting checks: {preserved}/{len(r.write_report.format_checks)} preserved unchanged; sections {', '.join(r.sections_applied) or '—'}"
+                f"Formatting checks: {preserved}/{len(r.write_report.format_checks)}"
+                f" preserved unchanged; sections {', '.join(r.sections_applied) or '—'}"
             )
     if len(history) > 1:
         st.markdown("#### Compare two versions")
@@ -331,5 +333,6 @@ def render_history(c: ServiceContainer) -> None:
                 language="diff",
             )
     st.caption(
-        f"History is kept for this browser session. Generated files are stored under {c.settings.generated_dir}."
+        "History is kept for this browser session. Generated files are stored under"
+        f" {c.settings.generated_dir}."
     )

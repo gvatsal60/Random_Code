@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import streamlit as st
+
 from models.document_models import SourceDocument, TemplateStructure
 from ui.components import badge
 
@@ -10,8 +11,7 @@ from ui.components import badge
 def render_template_structure(structure: TemplateStructure) -> None:
     m = st.columns(6)
     m[0].metric(
-        "Sections", sum(
-            1 for s in structure.sections if s.heading_block is not None)
+        "Sections", sum(1 for s in structure.sections if s.heading_block is not None)
     )
     m[1].metric("Placeholders", len(structure.placeholders))
     m[2].metric("Tables", len(structure.tables))
@@ -22,8 +22,7 @@ def render_template_structure(structure: TemplateStructure) -> None:
         st.info(warning)
 
     tab_sections, tab_ph, tab_tables, tab_hf, tab_layout = st.tabs(
-        ["Sections", "Placeholders", "Tables",
-            "Headers & footers", "Layout & metadata"]
+        ["Sections", "Placeholders", "Tables", "Headers & footers", "Layout & metadata"]
     )
     with tab_sections:
         for s in structure.sections:
@@ -45,7 +44,8 @@ def render_template_structure(structure: TemplateStructure) -> None:
                 st.markdown(
                     badge(state, kind)
                     + (
-                        f"  ·  placeholders: {', '.join('{{' + p + '}}' for p in s.placeholders)}"
+                        "  ·  placeholders:"
+                        f" {', '.join('{{' + p + '}}' for p in s.placeholders)}"
                         if s.placeholders
                         else ""
                     )
@@ -68,7 +68,8 @@ def render_template_structure(structure: TemplateStructure) -> None:
             )
         else:
             st.caption(
-                "No {{placeholders}} found. Content will be inserted into sections under their headings."
+                "No {{placeholders}} found. Content will be inserted into sections"
+                " under their headings."
             )
     with tab_tables:
         if not structure.tables:
@@ -81,8 +82,7 @@ def render_template_structure(structure: TemplateStructure) -> None:
             if t.preview:
                 width = max(len(r) for r in t.preview)
                 st.dataframe(
-                    [dict(enumerate(r + [""] * (width - len(r))))
-                     for r in t.preview],
+                    [dict(enumerate(r + [""] * (width - len(r)))) for r in t.preview],
                     hide_index=True,
                     width="stretch",
                 )
@@ -91,7 +91,8 @@ def render_template_structure(structure: TemplateStructure) -> None:
             st.caption("No headers or footers.")
         for hf in structure.headers_footers:
             st.markdown(
-                f"**Section {hf.section_index + 1} {hf.kind}** ({hf.variant.replace('_', ' ')})"
+                f"**Section {hf.section_index + 1} {hf.kind}**"
+                f" ({hf.variant.replace('_', ' ')})"
                 + (" · contains image/logo" if hf.has_images else "")
             )
             st.text(hf.text or "(empty)")
@@ -115,7 +116,8 @@ def render_template_structure(structure: TemplateStructure) -> None:
         )
         st.markdown("**Styles in use:** " + ", ".join(structure.styles_used))
         st.markdown(
-            f"**Hyperlinks:** {structure.hyperlink_count} · **Lists:** {'yes' if structure.has_numbered_lists else 'style-based or none'}"
+            f"**Hyperlinks:** {structure.hyperlink_count} · **Lists:**"
+            f" {'yes' if structure.has_numbered_lists else 'style-based or none'}"
         )
         if structure.metadata:
             st.json(structure.metadata)
@@ -163,7 +165,8 @@ def render_source(doc: SourceDocument) -> None:
             width="stretch",
         )
         st.caption(
-            "Pattern-based extraction. The Information Extraction agent performs the semantic analysis."
+            "Pattern-based extraction. The Information Extraction agent performs the"
+            " semantic analysis."
         )
     with t4:
         st.json(

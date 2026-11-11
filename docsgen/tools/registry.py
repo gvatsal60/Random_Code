@@ -23,14 +23,25 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
 
-from models.agent_models import AgentRole
 from pydantic import BaseModel, Field
+from strands.hooks import (
+    AfterToolCallEvent,
+    BeforeToolCallEvent,
+    HookProvider,
+    HookRegistry,
+)
+
+from models.agent_models import AgentRole
 from services.security import sanitize_error, wrap_untrusted
 from storage.configuration_store import ConfigurationStore
-from strands.hooks import (AfterToolCallEvent, BeforeToolCallEvent,
-                           HookProvider, HookRegistry)
-from tools import (csv_tools, docx_tools, excel_tools, pdf_tools,
-                   text_extraction, validation_tools)
+from tools import (
+    csv_tools,
+    docx_tools,
+    excel_tools,
+    pdf_tools,
+    text_extraction,
+    validation_tools,
+)
 from tools.context import DocumentContext
 
 A = AgentRole
@@ -278,8 +289,7 @@ class ToolRegistry:
                     source="mcp",
                     category=f"MCP · {info.server_name}",
                     description=info.description,
-                    enabled=bool(
-                        info.enabled and cfg is not None and cfg.enabled),
+                    enabled=bool(info.enabled and cfg is not None and cfg.enabled),
                     available=True,
                     server_id=info.server_id,
                     server_name=info.server_name,
@@ -491,8 +501,9 @@ class ToolGuardHook(HookProvider):
             return
         if descriptor.requires_approval and name not in self.approved:
             event.cancel_tool = (
-                f"Tool '{name}' requires explicit user approval before it can run "
-                f"({descriptor.approval_reason or 'consequential operation'}). Continue without it."
+                f"Tool '{name}' requires explicit user approval before it can run"
+                f" ({descriptor.approval_reason or 'consequential operation'})."
+                " Continue without it."
             )
             self.registry.record(
                 ToolExecution(
@@ -560,8 +571,7 @@ class ToolGuardHook(HookProvider):
             elif "json" in block:
                 try:
                     parts.append(
-                        json.dumps(block["json"],
-                                   ensure_ascii=False, default=str)
+                        json.dumps(block["json"], ensure_ascii=False, default=str)
                     )
                 except (TypeError, ValueError):
                     dropped += 1
@@ -576,6 +586,5 @@ class ToolGuardHook(HookProvider):
         if dropped:
             text += f"\n[{dropped} non-text content block(s) omitted]"
         sanitized = dict(result)
-        sanitized["content"] = [
-            {"text": wrap_untrusted(f"MCP tool {name}", text)}]
+        sanitized["content"] = [{"text": wrap_untrusted(f"MCP tool {name}", text)}]
         return sanitized

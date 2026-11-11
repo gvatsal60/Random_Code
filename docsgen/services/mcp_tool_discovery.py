@@ -11,9 +11,10 @@ import re
 from datetime import timedelta
 from typing import Any
 
-from models.mcp_models import MCPServerConfig, MCPToolInfo
 from strands.tools.mcp import MCPClient
 from strands.tools.mcp.mcp_agent_tool import MCPAgentTool
+
+from models.mcp_models import MCPServerConfig, MCPToolInfo
 
 MAX_DESCRIPTION_CHARS = 1_000
 MAX_PAGES = 50
@@ -111,16 +112,17 @@ def discover_tools(
                 # New tools: enabled by default only when they are not consequential.
                 enabled = default_enabled and not needs_approval
             info = MCPToolInfo(
-                qualified_name=listed.tool_name
-                if listed.tool_name.startswith(prefix)
-                else cfg.qualified_tool_name(original),
+                qualified_name=(
+                    listed.tool_name
+                    if listed.tool_name.startswith(prefix)
+                    else cfg.qualified_tool_name(original)
+                ),
                 original_name=original,
                 server_id=cfg.id,
                 server_name=cfg.name,
                 title=getattr(listed.mcp_tool, "title", None),
                 description=clean_description(spec.get("description")),
-                input_schema=dict(
-                    (spec.get("inputSchema") or {}).get("json") or {}),
+                input_schema=dict((spec.get("inputSchema") or {}).get("json") or {}),
                 enabled=bool(enabled),
                 read_only=read_only,
                 destructive=destructive,

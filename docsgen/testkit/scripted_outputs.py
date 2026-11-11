@@ -134,13 +134,24 @@ PLACEHOLDER_VALUES = {
     "prepared_by": "Priya Raman",
     "budget": "USD 248,000",
     "company_name": "Northwind Analytics Ltd.",
-    "scope_of_work": "Data pipelines, a customer data model, a reporting layer and staff training.",
+    "scope_of_work": (
+        "Data pipelines, a customer data model, a reporting layer and staff training."
+    ),
 }
 
 SECTION_TEXT = {
-    "s01": "Northwind Analytics Ltd. proposes a **Unified Customer Data Platform** for Contoso Retail Group.\n\nThe total budget is USD 248,000.",
-    "s04": "- Consolidate customer data from three systems.\n- Reduce campaign preparation time from 3 weeks to 2 days.\n- Achieve a data quality score of at least 95%.",
-    "s08": "| Work package | Cost (USD) |\n|---|---|\n| Data pipelines | 96000 |\n| Training and rollout | 30000 |",
+    "s01": (
+        "Northwind Analytics Ltd. proposes a **Unified Customer Data Platform** for"
+        " Contoso Retail Group.\n\nThe total budget is USD 248,000."
+    ),
+    "s04": (
+        "- Consolidate customer data from three systems.\n- Reduce campaign preparation"
+        " time from 3 weeks to 2 days.\n- Achieve a data quality score of at least 95%."
+    ),
+    "s08": (
+        "| Work package | Cost (USD) |\n|---|---|\n| Data pipelines | 96000 |\n|"
+        " Training and rollout | 30000 |"
+    ),
 }
 
 
@@ -192,8 +203,7 @@ def generation(messages: list, tool_names: list[str]) -> dict:
             )
         # reference_number intentionally not generated (missing information)
     sections.append(
-        {"target": "s99", "target_type": "section",
-            "content": "hallucinated target"}
+        {"target": "s99", "target_type": "section", "content": "hallucinated target"}
     )
     return {"sections": sections}
 
@@ -222,7 +232,10 @@ QUALITY = {
     "revisions": [
         {
             "target": "s01",
-            "revised_content": "Northwind Analytics Ltd. proposes a Unified Customer Data Platform for Contoso Retail Group, with a total budget of USD 248,000.",
+            "revised_content": (
+                "Northwind Analytics Ltd. proposes a Unified Customer Data Platform for"
+                " Contoso Retail Group, with a total budget of USD 248,000."
+            ),
             "rationale": "Merged sentences.",
         }
     ],

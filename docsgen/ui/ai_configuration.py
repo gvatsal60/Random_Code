@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 import streamlit as st
+
 from models.provider_models import FieldSpec, ProviderConfig, ProviderId
 from services import model_registry
 from services.container import ServiceContainer
-from services.provider_factory import (ProviderConfigError, _visible,
-                                       validate_config)
+from services.provider_factory import ProviderConfigError, _visible, validate_config
 from ui.components import badge, flash, page_header, show_flashes
 
 
@@ -64,7 +64,8 @@ def _setting_widget(field: FieldSpec, value: Any, key: str) -> Any:
 def render(c: ServiceContainer) -> None:
     page_header(
         "AI Provider Configuration",
-        "Choose the LLM used by every agent. Changes apply immediately to new agent runs — no restart needed.",
+        "Choose the LLM used by every agent. Changes apply immediately to new agent"
+        " runs — no restart needed.",
         "🧠",
     )
     clear_secret_widgets()
@@ -72,8 +73,10 @@ def render(c: ServiceContainer) -> None:
 
     specs = model_registry.list_specs()
     labels = {
-        s.id: s.label
-        + ("" if model_registry.is_installed(s) else "  (SDK not installed)")
+        s.id: (
+            s.label
+            + ("" if model_registry.is_installed(s) else "  (SDK not installed)")
+        )
         for s in specs
     }
     current = c.llm.active_config.provider if c.llm.active_config else ProviderId.OPENAI
@@ -103,9 +106,11 @@ def render(c: ServiceContainer) -> None:
                 st.markdown(
                     badge(
                         label,
-                        "ok"
-                        if status.ok
-                        else ("not tested" if status.ok is None else "error"),
+                        (
+                            "ok"
+                            if status.ok
+                            else ("not tested" if status.ok is None else "error")
+                        ),
                     )
                 )
                 if status.ok is not None:
@@ -118,7 +123,8 @@ def render(c: ServiceContainer) -> None:
             st.caption(f"[Strands provider documentation]({spec.docs_url})")
         if not model_registry.is_installed(spec):
             st.warning(
-                f"This provider's SDK is not installed. Run: `{model_registry.install_hint(spec)}`"
+                "This provider's SDK is not installed. Run:"
+                f" `{model_registry.install_hint(spec)}`"
             )
 
     with left:
@@ -133,8 +139,7 @@ def render(c: ServiceContainer) -> None:
             ):
                 continue
             settings[field.key] = _setting_widget(
-                field, base.settings.get(
-                    field.key, field.default), f"{pk}_{field.key}"
+                field, base.settings.get(field.key, field.default), f"{pk}_{field.key}"
             )
         for field in spec.secret_fields():
             if field.show_if and not _visible(field.show_if, settings):
@@ -176,8 +181,7 @@ def render(c: ServiceContainer) -> None:
                 c,
                 provider,
                 new_secrets,
-                st.session_state.get(
-                    f"{pk}_persist") == "Encrypted on this machine",
+                st.session_state.get(f"{pk}_persist") == "Encrypted on this machine",
             )
             new_secrets.clear()
             with st.spinner("Listing models…"):
@@ -198,16 +202,19 @@ def render(c: ServiceContainer) -> None:
                 cols[1].warning(f"Discovery: {discovered['error']}")
             else:
                 cols[1].success(
-                    f"{len(model_options)} model(s) {'discovered' if discovered.get('source') == 'discovered' else 'from catalog'}"
+                    f"{len(model_options)} model(s)"
+                    f" {'discovered' if discovered.get('source') == 'discovered' else 'from catalog'}"
                 )
         if base.model_id and base.model_id not in model_options:
             model_options = [base.model_id] + model_options
         choice = st.selectbox(
             "Model",
             model_options or ["(enter a model name below)"],
-            index=model_options.index(base.model_id)
-            if base.model_id in model_options
-            else 0,
+            index=(
+                model_options.index(base.model_id)
+                if base.model_id in model_options
+                else 0
+            ),
             key=f"{pk}_model_select",
             help=spec.model_hint or None,
         )
@@ -259,7 +266,11 @@ def render(c: ServiceContainer) -> None:
             index=1 if c.settings.default_persist_credentials else 0,
             horizontal=True,
             key=f"{pk}_persist",
-            help="Session-only credentials disappear when you close the browser tab. Encrypted credentials are stored with Fernet encryption in the data directory.",
+            help=(
+                "Session-only credentials disappear when you close the browser tab."
+                " Encrypted credentials are stored with Fernet encryption in the data"
+                " directory."
+            ),
         )
         persist = persist_choice == "Encrypted on this machine"
 
@@ -275,13 +286,11 @@ def render(c: ServiceContainer) -> None:
         test = b1.button(
             "Test connection", key=f"{pk}_test", type="secondary", width="stretch"
         )
-        save = b2.button("Save configuration",
-                         key=f"{pk}_save", width="stretch")
+        save = b2.button("Save configuration", key=f"{pk}_save", width="stretch")
         apply = b3.button(
             "Apply configuration", key=f"{pk}_apply", type="primary", width="stretch"
         )
-        clear = b4.button("Clear credentials",
-                          key=f"{pk}_clear", width="stretch")
+        clear = b4.button("Clear credentials", key=f"{pk}_clear", width="stretch")
 
         if test or save or apply:
             _store_secrets(c, provider, new_secrets, persist)
@@ -296,7 +305,8 @@ def render(c: ServiceContainer) -> None:
             else:
                 if test:
                     with st.spinner(
-                        "Initializing the model through Strands and sending a test request…"
+                        "Initializing the model through Strands and sending a test"
+                        " request…"
                     ):
                         status = c.llm.test_connection(config)
                     (st.success if status.ok else st.error)(
@@ -305,11 +315,15 @@ def render(c: ServiceContainer) -> None:
                 if save:
                     c.llm.save(config, make_default=True)
                     flash(
-                        "Configuration saved. It will be restored as the default next time."
+                        "Configuration saved. It will be restored as the default next"
+                        " time."
                         + (
                             ""
                             if persist
-                            else " Credentials are session-only and must be re-entered next time."
+                            else (
+                                " Credentials are session-only and must be re-entered"
+                                " next time."
+                            )
                         )
                     )
                     st.rerun()
@@ -320,15 +334,15 @@ def render(c: ServiceContainer) -> None:
                         st.error(str(exc))
                     else:
                         flash(
-                            f"Applied: {c.llm.describe()}. All subsequent agent runs use this model."
+                            f"Applied: {c.llm.describe()}. All subsequent agent runs"
+                            " use this model."
                         )
                         st.rerun()
         if clear:
             removed = c.credentials.clear_namespace(
                 c.credentials.llm_namespace(provider)
             )
-            flash(
-                f"Removed {removed} stored credential(s) for {spec.label}.", "info")
+            flash(f"Removed {removed} stored credential(s) for {spec.label}.", "info")
             st.rerun()
 
 

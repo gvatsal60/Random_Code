@@ -16,11 +16,12 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
-from document_engine.formatting_preserver import in_fallback, own_text_nodes
 from docx.document import Document as DocxDocument
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from docx.oxml.ns import qn
 from lxml import etree
+
+from document_engine.formatting_preserver import in_fallback, own_text_nodes
 
 PLACEHOLDER_RE = re.compile(r"\{\{\s*([A-Za-z_][A-Za-z0-9_.\-]{0,63})\s*\}\}")
 XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
@@ -63,10 +64,10 @@ def document_parts(doc: DocxDocument) -> list[tuple[str, str, etree._Element]]:
 def _location(p: etree._Element, kind: str) -> str:
     if kind != "body":
         return kind
-    for anc in p.iterancestors():
-        if anc.tag == qn("w:txbxContent"):
+    for ancestor in p.iterancestors():
+        if ancestor.tag == qn("w:txbxContent"):
             return "textbox"
-        if anc.tag == qn("w:tc"):
+        if ancestor.tag == qn("w:tc"):
             return "table"
     return "body"
 
@@ -98,8 +99,7 @@ def find_placeholders(doc: DocxDocument) -> list[PlaceholderHit]:
                     start <= m.start() and m.end() <= end for _, start, end in spans
                 )
                 hits.append(
-                    PlaceholderHit(m.group(1), m.group(
-                        0), _location(p, kind), split)
+                    PlaceholderHit(m.group(1), m.group(0), _location(p, kind), split)
                 )
     return hits
 
@@ -134,8 +134,7 @@ def replace_in_paragraph(p: etree._Element, values: dict[str, str]) -> list[str]
     text, spans = _paragraph_runs_text(p)
     if "{{" not in text:
         return []
-    matches = [m for m in PLACEHOLDER_RE.finditer(
-        text) if m.group(1) in values]
+    matches = [m for m in PLACEHOLDER_RE.finditer(text) if m.group(1) in values]
     replaced: list[str] = []
     for m in reversed(matches):  # right to left keeps earlier offsets valid
         start, end, key = m.start(), m.end(), m.group(1)
@@ -145,7 +144,7 @@ def replace_in_paragraph(p: etree._Element, values: dict[str, str]) -> list[str]
         t_first, s_first, _ = spans[first]
         t_last, s_last, _ = spans[last]
         before = (t_first.text or "")[: start - s_first]
-        after = (t_last.text or "")[end - s_last:]
+        after = (t_last.text or "")[end - s_last :]
         if first == last:
             _write_value(t_first, before, value, after)
         else:

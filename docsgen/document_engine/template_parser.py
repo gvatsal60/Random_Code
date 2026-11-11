@@ -13,33 +13,47 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import docx
-from document_engine.formatting_preserver import (NS, element_text,
-                                                  has_drawing, has_page_break,
-                                                  has_section_break,
-                                                  iter_body_blocks,
-                                                  paragraph_text)
-from document_engine.placeholder_manager import (PLACEHOLDER_RE,
-                                                 document_parts,
-                                                 find_placeholders)
 from docx.document import Document as DocxDocument
 from docx.oxml.ns import qn
 from docx.shared import Emu
 from docx.text.paragraph import Paragraph
 from lxml import etree
-from models.document_models import (HeaderFooterInfo, PageSetup, Placeholder,
-                                    TableInfo, TemplateSection,
-                                    TemplateStructure)
+
+from document_engine.formatting_preserver import (
+    NS,
+    element_text,
+    has_drawing,
+    has_page_break,
+    has_section_break,
+    iter_body_blocks,
+    paragraph_text,
+)
+from document_engine.placeholder_manager import (
+    PLACEHOLDER_RE,
+    document_parts,
+    find_placeholders,
+)
+from models.document_models import (
+    HeaderFooterInfo,
+    PageSetup,
+    Placeholder,
+    TableInfo,
+    TemplateSection,
+    TemplateStructure,
+)
 
 INSTRUCTION_PATTERNS = [
     re.compile(r"^\s*\[[^\]]{2,}\]\s*$"),
     re.compile(r"^\s*<[^>]{2,}>\s*$"),
     re.compile(
         r"^\s*(insert|enter|describe|provide|add|type|write|list|summari[sz]e|explain|include|state|outline|detail|"
-        r"identify|specify|document|define|give|discuss|present|propose|fill in|complete|replace)\b",
+        r"identify|specify|document|define|give|discuss|present|propose|fill"
+        r" in|complete|replace)\b",
         re.IGNORECASE,
     ),
     re.compile(
-        r"\bthis (section|chapter|part)\b.{0,40}\b(should|will|must|shall|provides?|presents?|contains?|describes?|includes?|synthesi[sz]es|proposes)\b",
+        r"\bthis"
+        r" (section|chapter|part)\b.{0,40}\b(should|will|must|shall|provides?|presents?|contains?|describes?|includes?|synthesi[sz]es|proposes)\b",  # noqa: E501
         re.IGNORECASE,
     ),
     re.compile(r"lorem ipsum", re.IGNORECASE),
@@ -120,11 +134,9 @@ def build_blocks(doc: DocxDocument) -> list[Block]:
         if el.tag == qn("w:p"):
             para = Paragraph(el, doc._body)
             text = paragraph_text(el)
-            style_name = (
-                para.style.name if para.style is not None else "") or ""
+            style_name = (para.style.name if para.style is not None else "") or ""
             level = _style_heading_level(para) if text.strip() else None
-            structural = has_section_break(
-                el) or has_page_break(el) or has_drawing(el)
+            structural = has_section_break(el) or has_page_break(el) or has_drawing(el)
             blocks.append(
                 Block(
                     index=i,
@@ -140,8 +152,7 @@ def build_blocks(doc: DocxDocument) -> list[Block]:
             )
         else:
             kind = "tbl" if el.tag == qn("w:tbl") else "sdt"
-            blocks.append(Block(index=i, element=el,
-                          kind=kind, text=element_text(el)))
+            blocks.append(Block(index=i, element=el, kind=kind, text=element_text(el)))
     if not any(b.heading_level is not None for b in blocks):
         for b in blocks:
             if b.kind == "p" and _looks_like_fallback_heading(
@@ -165,8 +176,7 @@ def build_sections(blocks: list[Block]) -> list[TemplateSection]:
         section.content_text = "\n".join(texts)[:4000]
         real = [b for b in body if b.text.strip() and not b.instructional]
         section.is_empty = not real
-        section.instructional_blocks = [
-            b.index for b in body if b.instructional]
+        section.instructional_blocks = [b.index for b in body if b.instructional]
         keys: list[str] = []
         for b in body:
             keys += PLACEHOLDER_RE.findall(b.text)
@@ -199,8 +209,7 @@ def analyze_document(
 ) -> tuple[TemplateStructure, list[Block]]:
     blocks = build_blocks(doc)
     sections = build_sections(blocks)
-    section_of_block = {
-        idx: s.section_id for s in sections for idx in s.body_blocks}
+    section_of_block = {idx: s.section_id for s in sections for idx in s.body_blocks}
 
     tables: list[TableInfo] = []
     table_counter = 0
@@ -211,8 +220,7 @@ def analyze_document(
         preview = []
         max_cols = 0
         for tr in rows[:8]:
-            cells = [element_text(tc).strip()[:60]
-                     for tc in tr.findall("w:tc", NS)]
+            cells = [element_text(tc).strip()[:60] for tc in tr.findall("w:tc", NS)]
             max_cols = max(max_cols, len(cells))
             preview.append(cells)
         tables.append(
@@ -220,8 +228,7 @@ def analyze_document(
                 index=table_counter,
                 block=b.index,
                 rows=len(rows),
-                cols=max(max_cols, len(
-                    b.element.findall("w:tblGrid/w:gridCol", NS))),
+                cols=max(max_cols, len(b.element.findall("w:tblGrid/w:gridCol", NS))),
                 preview=preview,
                 section_id=section_of_block.get(b.index),
                 placeholders=sorted(set(PLACEHOLDER_RE.findall(b.text))),
@@ -284,15 +291,17 @@ def analyze_document(
                     "left": _inches(section.left_margin),
                     "right": _inches(section.right_margin),
                 },
-                start_type=str(section.start_type).split(".")[-1].split(" ")[0]
-                if section.start_type is not None
-                else None,
+                start_type=(
+                    str(section.start_type).split(".")[-1].split(" ")[0]
+                    if section.start_type is not None
+                    else None
+                ),
             )
         )
 
     cp = doc.core_properties
     metadata = {
-        k: (str(v) if v is not None else None)
+        k: str(v) if v is not None else None
         for k, v in {
             "title": cp.title,
             "subject": cp.subject,
@@ -322,11 +331,13 @@ def analyze_document(
     warnings = []
     if not any(s.heading_block is not None for s in sections):
         warnings.append(
-            "No headings were found; section-based insertion is limited. Placeholders still work."
+            "No headings were found; section-based insertion is limited. Placeholders"
+            " still work."
         )
     if any(p.split_across_runs for p in placeholders.values()):
         warnings.append(
-            "Some placeholders are split across several Word runs; they will still be replaced correctly."
+            "Some placeholders are split across several Word runs; they will still be"
+            " replaced correctly."
         )
 
     structure = TemplateStructure(

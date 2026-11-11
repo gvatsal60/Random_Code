@@ -6,15 +6,23 @@ import json
 from pathlib import Path
 
 import docx
-from document_engine.formatting_preserver import (NS, element_text,
-                                                  iter_body_blocks,
-                                                  paragraph_text)
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
-from models.document_models import (ExtractedTable, SourceChunk,
-                                    SourceDocument, SourceRef)
-from services.security import wrap_untrusted
 from strands import tool
+
+from document_engine.formatting_preserver import (
+    NS,
+    element_text,
+    iter_body_blocks,
+    paragraph_text,
+)
+from models.document_models import (
+    ExtractedTable,
+    SourceChunk,
+    SourceDocument,
+    SourceRef,
+)
+from services.security import wrap_untrusted
 from tools.context import DocumentContext
 from tools.text_extraction import CHUNK_CHARS, extract_entities
 
@@ -79,8 +87,7 @@ def extract_docx_source(
             table_no += 1
             rows = []
             for tr in el.findall("w:tr", NS):
-                rows.append([element_text(tc).strip()
-                            for tc in tr.findall("w:tc", NS)])
+                rows.append([element_text(tc).strip() for tc in tr.findall("w:tc", NS)])
             if not rows:
                 continue
             ref = SourceRef(
@@ -95,8 +102,7 @@ def extract_docx_source(
                     total_rows=len(rows) - 1,
                 )
             )
-            table_text = "\n".join(" | ".join(r)
-                                   for r in rows[:MAX_TABLE_ROWS])
+            table_text = "\n".join(" | ".join(r) for r in rows[:MAX_TABLE_ROWS])
             flush(para_no)
             cid = f"{doc_id}-C{len(chunks) + 1}"
             chunks.append(
@@ -192,7 +198,10 @@ def make_get_template_section(ctx: DocumentContext):
             return "No template has been uploaded."
         section = ctx.template.section(section_id.strip().lower())
         if section is None:
-            return f"Unknown section '{section_id}'. Valid ids: {', '.join(s.section_id for s in ctx.template.sections)}"
+            return (
+                f"Unknown section '{section_id}'. Valid ids:"
+                f" {', '.join(s.section_id for s in ctx.template.sections)}"
+            )
         tables = [
             t.model_dump()
             for t in ctx.template.tables
@@ -210,8 +219,7 @@ def make_get_template_section(ctx: DocumentContext):
         ) | {"tables": tables}
         return ctx.limit(
             wrap_untrusted(
-                f"template section {section.section_id}", json.dumps(
-                    data, indent=1)
+                f"template section {section.section_id}", json.dumps(data, indent=1)
             )
         )
 
@@ -221,7 +229,10 @@ def make_get_template_section(ctx: DocumentContext):
 def make_list_template_placeholders(ctx: DocumentContext):
     @tool(name="list_template_placeholders")
     def list_template_placeholders() -> str:
-        """List the {{placeholders}} found in the template with their locations (body, table, header, footer, textbox)."""
+        """List the {{placeholders}} found in the template with their locations.
+
+        Locations are body, table, header, footer or textbox.
+        """
         if ctx.template is None:
             return "No template has been uploaded."
         return json.dumps(
@@ -260,8 +271,7 @@ def make_get_document_tables(ctx: DocumentContext):
                 }
             )
         return ctx.limit(
-            wrap_untrusted(f"tables of {doc.file_name}",
-                           json.dumps(out, indent=1))
+            wrap_untrusted(f"tables of {doc.file_name}", json.dumps(out, indent=1))
         )
 
     return get_document_tables

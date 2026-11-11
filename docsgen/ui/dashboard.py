@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import streamlit as st
+
 from config import APP_NAME, APP_VERSION
 from models.agent_models import TASK_LABELS, TaskType
 from services.container import ServiceContainer
@@ -12,7 +13,9 @@ from ui.components import badge, goto_button, show_flashes
 def render(c: ServiceContainer) -> None:
     st.markdown(
         f"""<div class="dg-hero"><h1>📄 {APP_NAME}</h1>
-        <p>Intelligent document automation: Strands agents read your sources and fill your own Word template — formatting intact, every fact traceable, nothing written without your approval.</p></div>""",
+        <p>Intelligent document automation: Strands agents read your sources and fill
+        your own Word template — formatting intact, every fact traceable, nothing written
+        without your approval.</p></div>""",
         unsafe_allow_html=True,
     )
     show_flashes()
@@ -63,12 +66,14 @@ def render(c: ServiceContainer) -> None:
         st.caption("Available tools")
         st.markdown(f"**{len(enabled_tools)} enabled**")
         st.caption(
-            f"{sum(1 for d in enabled_tools if d.source == 'builtin')} built-in · {sum(1 for d in enabled_tools if d.source == 'mcp')} MCP"
+            f"{sum(1 for d in enabled_tools if d.source == 'builtin')} built-in ·"
+            f" {sum(1 for d in enabled_tools if d.source == 'mcp')} MCP"
         )
     with row1[3].container(border=True):
         st.caption("Documents")
         st.markdown(
-            f"**Template:** {'✓' if c.session.template else '—'} · **Sources:** {len(c.session.sources)}"
+            f"**Template:** {'✓' if c.session.template else '—'} · **Sources:**"
+            f" {len(c.session.sources)}"
         )
         st.caption(
             c.session.template.file_name
@@ -83,10 +88,12 @@ def render(c: ServiceContainer) -> None:
             st.markdown(badge("Not started", "disabled"))
         else:
             st.markdown(
-                f"{TASK_LABELS[state.task_type]}  \n{badge(state.stage.value.replace('_', ' '), 'error' if state.stage.value == 'failed' else 'info')}"
+                f"{TASK_LABELS[state.task_type]} "
+                f" \n{badge(state.stage.value.replace('_', ' '), 'error' if state.stage.value == 'failed' else 'info')}"
             )
             st.caption(
-                f"Run {state.run_id} · {len(state.approved_drafts)}/{len(state.drafts)} approved"
+                f"Run {state.run_id} · {len(state.approved_drafts)}/{len(state.drafts)}"
+                " approved"
             )
             if state.last_error:
                 st.error(state.last_error)

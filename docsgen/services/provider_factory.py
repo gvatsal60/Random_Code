@@ -56,13 +56,13 @@ def validate_config(
         )
         if mode == "access_keys" and not has_keys:
             problems.append(
-                "AWS access key ID and secret access key are required for access-key authentication."
+                "AWS access key ID and secret access key are required for access-key"
+                " authentication."
             )
         if mode == "assume_role" and not settings.get("role_arn"):
             problems.append("An IAM role ARN is required to assume a role.")
         if mode == "profile" and not settings.get("profile_name"):
-            problems.append(
-                "A profile name is required for profile authentication.")
+            problems.append("A profile name is required for profile authentication.")
         if mode == "bedrock_api_key" and not secrets.get("bedrock_api_key"):
             problems.append("A Bedrock API key is required.")
     return problems
@@ -83,7 +83,8 @@ def _load_class(config: ProviderConfig) -> type:
         module = importlib.import_module(spec.strands_module)
     except ImportError as exc:
         raise ProviderDependencyError(
-            f"The {spec.label} provider requires an optional dependency. Install it with: {install_hint(spec)}"
+            f"The {spec.label} provider requires an optional dependency. Install it"
+            f" with: {install_hint(spec)}"
         ) from exc
     return getattr(module, spec.strands_class)
 
@@ -156,8 +157,7 @@ def create_model(
     config: ProviderConfig, secrets: dict[str, str], *, allow_http_remote: bool = False
 ):
     """Instantiate the Strands model for ``config``. Raises ProviderConfigError / ProviderDependencyError."""
-    problems = validate_config(
-        config, secrets, allow_http_remote=allow_http_remote)
+    problems = validate_config(config, secrets, allow_http_remote=allow_http_remote)
     if problems:
         raise ProviderConfigError(" ".join(problems))
     cls = _load_class(config)

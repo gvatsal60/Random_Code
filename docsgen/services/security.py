@@ -163,7 +163,8 @@ def validate_url(
             )
         if not local and not allow_http_remote:
             raise PolicyError(
-                "Remote servers must use https:// (plain HTTP is disabled in Application Settings)."
+                "Remote servers must use https:// (plain HTTP is disabled in"
+                " Application Settings)."
             )
     return url
 
@@ -196,30 +197,33 @@ def validate_stdio_command(command: str, args: list[str], allowlist: list[str]) 
         raise PolicyError("A command is required for stdio servers.")
     if any(ch in command for ch in ";|&$`<>\n\r"):
         raise PolicyError(
-            "The command contains shell metacharacters. Provide the executable and arguments separately."
+            "The command contains shell metacharacters. Provide the executable and"
+            " arguments separately."
         )
     executable = Path(command).name
     base = executable.lower()
     for suffix in (".exe", ".cmd", ".bat"):
         base = base.removesuffix(suffix)
     if base in _SHELL_NAMES:
-        raise PolicyError(
-            "Shell interpreters cannot be used as MCP server commands.")
+        raise PolicyError("Shell interpreters cannot be used as MCP server commands.")
     allowed = {a.lower() for a in allowlist}
     if base not in allowed and executable.lower() not in allowed:
         raise PolicyError(
-            f"'{executable}' is not on the stdio command allow list. Add it in Application Settings if you trust it."
+            f"'{executable}' is not on the stdio command allow list. Add it in"
+            " Application Settings if you trust it."
         )
     for arg in args:
         if "\x00" in arg:
             raise PolicyError("Arguments must not contain NUL characters.")
     if base in {"python", "python3"} and any(a in {"-c"} for a in args):
         raise PolicyError(
-            "Inline Python code (-c) is not allowed; point to a server script or module instead."
+            "Inline Python code (-c) is not allowed; point to a server script or module"
+            " instead."
         )
     if base == "node" and any(a in {"-e", "--eval", "-p", "--print"} for a in args):
         raise PolicyError(
-            "Inline JavaScript evaluation is not allowed; point to a server script instead."
+            "Inline JavaScript evaluation is not allowed; point to a server script"
+            " instead."
         )
 
 

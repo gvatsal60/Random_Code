@@ -8,13 +8,18 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from models.mcp_models import (MCPServerConfig, MCPServerState, MCPTestResult,
-                               MCPToolInfo)
+from strands.tools.mcp import MCPClient
+
+from models.mcp_models import (
+    MCPServerConfig,
+    MCPServerState,
+    MCPTestResult,
+    MCPToolInfo,
+)
 from services.mcp_client_factory import ClientPolicy, build_client
 from services.mcp_credential_manager import MCPCredentialManager
 from services.mcp_tool_discovery import SafeMCPAgentTool, discover_tools
 from services.security import Redactor, sanitize_error
-from strands.tools.mcp import MCPClient
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +74,7 @@ class MCPConnectionManager:
 
     def tools(self, server_id: str) -> list[tuple[SafeMCPAgentTool, MCPToolInfo]]:
         return (
-            list(self._tools.get(server_id, [])
-                 ) if self.is_connected(server_id) else []
+            list(self._tools.get(server_id, [])) if self.is_connected(server_id) else []
         )
 
     # ------------------------------------------------------------------ lifecycle
@@ -91,8 +95,7 @@ class MCPConnectionManager:
                     cfg, self._secrets, self._policy(), self._stderr_path(cfg.id)
                 )
                 client.start()
-                tools = discover_tools(
-                    client, cfg, default_enabled=default_enabled)
+                tools = discover_tools(client, cfg, default_enabled=default_enabled)
             except Exception as exc:  # noqa: BLE001 - recorded on the server state
                 if client is not None:
                     self._safe_stop(client)
@@ -109,8 +112,7 @@ class MCPConnectionManager:
                 len(tools),
                 datetime.now(),
             )
-            logger.info("MCP server %s connected with %d tools",
-                        cfg.id, len(tools))
+            logger.info("MCP server %s connected with %d tools", cfg.id, len(tools))
             return st
 
     def refresh_tools(
@@ -153,8 +155,7 @@ class MCPConnectionManager:
         try:
             client.stop(None, None, None)
         except Exception as exc:  # noqa: BLE001 - closing an already broken session
-            logger.debug("Error while stopping MCP client: %s",
-                         sanitize_error(exc))
+            logger.debug("Error while stopping MCP client: %s", sanitize_error(exc))
         errlog = getattr(client, "_docsgen_errlog", None)
         if errlog is not None:
             try:
@@ -170,8 +171,7 @@ class MCPConnectionManager:
         client: MCPClient | None = None
         stderr_path = self._log_dir / f"mcp_{cfg.id}.test.stderr.log"
         try:
-            client = build_client(cfg, self._secrets,
-                                  self._policy(), stderr_path)
+            client = build_client(cfg, self._secrets, self._policy(), stderr_path)
             diagnostics.append("Configuration is valid.")
             client.start()
             diagnostics.append("MCP session initialized.")

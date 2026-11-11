@@ -19,6 +19,7 @@ from pathlib import Path
 
 from docx.oxml.ns import qn
 from lxml import etree
+
 from models.document_models import FormatCheck
 
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -362,7 +363,9 @@ def compare_snapshots(
                 FormatCheck(
                     check=label,
                     status="changed_expected",
-                    detail="Updated only where placeholders or list numbering were filled.",
+                    detail=(
+                        "Updated only where placeholders or list numbering were filled."
+                    ),
                 )
             )
         else:
@@ -375,37 +378,46 @@ def compare_snapshots(
     checks.append(
         FormatCheck(
             check="Page size, orientation and margins (section properties)",
-            status="preserved"
-            if before.section_props == after.section_props
-            else "changed",
+            status=(
+                "preserved"
+                if before.section_props == after.section_props
+                else "changed"
+            ),
             detail=f"{len(before.section_props)} section(s)",
         )
     )
     checks.append(
         FormatCheck(
             check="Section breaks",
-            status="preserved"
-            if len(before.section_props) == len(after.section_props)
-            else "changed",
+            status=(
+                "preserved"
+                if len(before.section_props) == len(after.section_props)
+                else "changed"
+            ),
             detail=f"{len(before.section_props)} → {len(after.section_props)}",
         )
     )
     checks.append(
         FormatCheck(
             check="Images and logos",
-            status="preserved"
-            if sorted(before.image_hashes) == sorted(after.image_hashes)
-            and after.drawings >= before.drawings
-            else "changed",
-            detail=f"{len(before.image_hashes)} image part(s), {before.drawings} → {after.drawings} placement(s)",
+            status=(
+                "preserved"
+                if sorted(before.image_hashes) == sorted(after.image_hashes)
+                and after.drawings >= before.drawings
+                else "changed"
+            ),
+            detail=(
+                f"{len(before.image_hashes)} image part(s), {before.drawings} →"
+                f" {after.drawings} placement(s)"
+            ),
         )
     )
     checks.append(
         FormatCheck(
             check="Page breaks",
-            status="preserved"
-            if after.page_breaks >= before.page_breaks
-            else "changed",
+            status=(
+                "preserved" if after.page_breaks >= before.page_breaks else "changed"
+            ),
             detail=f"{before.page_breaks} → {after.page_breaks}",
         )
     )
@@ -438,7 +450,10 @@ def compare_snapshots(
             detail=(
                 "No styles lost."
                 if not lost_styles
-                else f"No longer used (replaced instructional text): {', '.join(sorted(lost_styles))}"
+                else (
+                    "No longer used (replaced instructional text):"
+                    f" {', '.join(sorted(lost_styles))}"
+                )
             ),
         )
     )
@@ -447,18 +462,24 @@ def compare_snapshots(
         FormatCheck(
             check="Direct font formatting",
             status="preserved" if not lost_fonts else "changed_expected",
-            detail="All fonts still in use."
-            if not lost_fonts
-            else f"No longer used: {', '.join(sorted(lost_fonts))}",
+            detail=(
+                "All fonts still in use."
+                if not lost_fonts
+                else f"No longer used: {', '.join(sorted(lost_fonts))}"
+            ),
         )
     )
     checks.append(
         FormatCheck(
             check="Numbered and bulleted lists",
-            status="preserved"
-            if after.list_paragraphs >= before.list_paragraphs
-            else "changed_expected",
-            detail=f"{before.list_paragraphs} → {after.list_paragraphs} list paragraph(s)",
+            status=(
+                "preserved"
+                if after.list_paragraphs >= before.list_paragraphs
+                else "changed_expected"
+            ),
+            detail=(
+                f"{before.list_paragraphs} → {after.list_paragraphs} list paragraph(s)"
+            ),
         )
     )
     return checks

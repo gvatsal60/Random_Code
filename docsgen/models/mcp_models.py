@@ -40,7 +40,9 @@ AUTH_LABELS = {
     AuthType.BEARER: "Bearer token",
     AuthType.API_KEY_HEADER: "API key header",
     AuthType.CUSTOM_HEADERS: "Custom headers only",
-    AuthType.OAUTH_CLIENT_CREDENTIALS: "OAuth 2.0 client credentials (Streamable HTTP only)",
+    AuthType.OAUTH_CLIENT_CREDENTIALS: (
+        "OAuth 2.0 client credentials (Streamable HTTP only)"
+    ),
 }
 
 
@@ -94,7 +96,8 @@ class MCPServerConfig(BaseModel):
         value = (value or "").strip().lower()
         if not _ID_RE.match(value):
             raise ValueError(
-                "Server identifier must be 2–32 characters: lowercase letters, digits and underscores, starting with a letter."
+                "Server identifier must be 2–32 characters: lowercase letters, digits"
+                " and underscores, starting with a letter."
             )
         return value
 
@@ -154,8 +157,7 @@ class MCPServerConfig(BaseModel):
         if value is None or value == "":
             return None
         if not re.match(r"^[A-Za-z][A-Za-z0-9_]{0,23}$", value):
-            raise ValueError(
-                "Tool prefix must be 1–24 letters, digits or underscores.")
+            raise ValueError("Tool prefix must be 1–24 letters, digits or underscores.")
         return value
 
     @model_validator(mode="after")
@@ -172,11 +174,11 @@ class MCPServerConfig(BaseModel):
             if self.auth_type == AuthType.OAUTH_CLIENT_CREDENTIALS:
                 if self.transport != TransportType.STREAMABLE_HTTP:
                     raise ValueError(
-                        "OAuth client credentials are only supported with Streamable HTTP."
+                        "OAuth client credentials are only supported with Streamable"
+                        " HTTP."
                     )
                 if not self.oauth_client_id:
-                    raise ValueError(
-                        "OAuth client credentials require a client ID.")
+                    raise ValueError("OAuth client credentials require a client ID.")
         return self
 
     @property
@@ -188,8 +190,7 @@ class MCPServerConfig(BaseModel):
         return f"{self.effective_prefix}_{original}"
 
 
-ServerStatus = Literal["disconnected",
-                       "connecting", "connected", "error", "disabled"]
+ServerStatus = Literal["disconnected", "connecting", "connected", "error", "disabled"]
 
 
 class MCPServerState(BaseModel):

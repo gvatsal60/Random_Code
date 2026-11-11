@@ -6,8 +6,9 @@ from datetime import datetime
 from enum import Enum
 from typing import Literal
 
-from models.document_models import SourceRef
 from pydantic import BaseModel, Field
+
+from models.document_models import SourceRef
 
 
 class AgentRole(str, Enum):
@@ -36,7 +37,9 @@ class SectionRequirement(BaseModel):
     """What a template section needs."""
 
     section_id: str = Field(
-        description="Section identifier exactly as given in the template outline, e.g. s03."
+        description=(
+            "Section identifier exactly as given in the template outline, e.g. s03."
+        )
     )
     title: str
     purpose: str = Field(
@@ -48,13 +51,15 @@ class SectionRequirement(BaseModel):
     expected_length: Literal["short", "medium", "long"] = "medium"
     should_fill: bool = Field(
         default=True,
-        description="False for sections that must stay unchanged (e.g. cover, table of contents).",
+        description=(
+            "False for sections that must stay unchanged (e.g. cover, table of"
+            " contents)."
+        ),
     )
 
 
 class PlaceholderRequirement(BaseModel):
-    key: str = Field(
-        description="Placeholder key without braces, exactly as listed.")
+    key: str = Field(description="Placeholder key without braces, exactly as listed.")
     description: str
     expected_type: Literal[
         "text", "date", "number", "currency", "name", "paragraph", "other"
@@ -160,14 +165,14 @@ class ResearchResult(BaseModel):
 
 # -------------------------------------------------------------------- Agent 4: Generation
 class GeneratedSection(BaseModel):
-    target: str = Field(
-        description="Section id (e.g. s04) or placeholder key.")
+    target: str = Field(description="Section id (e.g. s04) or placeholder key.")
     target_type: Literal["section", "placeholder"]
     title: str = ""
     content: str = Field(
         description=(
-            "Content to insert. For sections use plain paragraphs separated by blank lines; bullet items start "
-            "with '- ', numbered items with '1. '; **bold** is allowed. For placeholders give only the value."
+            "Content to insert. For sections use plain paragraphs separated by blank"
+            " lines; bullet items start with '- ', numbered items with '1. '; **bold**"
+            " is allowed. For placeholders give only the value."
         )
     )
     fact_ids: list[str] = Field(default_factory=list)

@@ -1,0 +1,8 @@
+[flake8]
+# Align flake8 (and autopep8, which reads this file) with ruff-format so the hooks agree:
+# ruff-format targets 88 columns; lines it cannot wrap (long strings, comments) may run to 120.
+# "ignore" (not "extend-ignore") because autopep8 only honours "ignore"; it keeps pycodestyle's
+# defaults plus the codes that conflict with ruff-format's style (E203 slice spacing, E701/E704).
+max-line-length = 120
+ignore = E121, E123, E126, E203, E226, E24, E701, E704, W503, W504
+exclude = .git, .venv, venv, __pycache__

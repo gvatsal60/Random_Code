@@ -9,6 +9,7 @@ from __future__ import annotations
 import difflib
 import re
 
+from models.agent_models import TargetType
 from models.document_models import TemplateSection, TemplateStructure
 
 
@@ -24,7 +25,7 @@ def _norm(text: str) -> str:
 
 def resolve_target(
     structure: TemplateStructure, target: str, target_type: str | None = None
-) -> tuple[str, str] | None:
+) -> tuple[TargetType, str] | None:
     """Return (target_type, canonical_target) or None if the target does not exist in the template."""
     raw = (target or "").strip()
     if not raw:
@@ -44,8 +45,7 @@ def resolve_target(
         wanted = _norm(raw)
         best, score = None, 0.0
         for s in structure.sections:
-            ratio = difflib.SequenceMatcher(
-                None, wanted, _norm(s.title)).ratio()
+            ratio = difflib.SequenceMatcher(None, wanted, _norm(s.title)).ratio()
             if ratio > score:
                 best, score = s, ratio
         if best is not None and score >= 0.8:

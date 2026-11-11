@@ -1,9 +1,9 @@
 """Live end-to-end tests against a real LLM provider. Skipped unless credentials are configured.
 
-Enable with, for example:
-    DOCSGEN_LIVE_PROVIDER=openai DOCSGEN_LIVE_MODEL=gpt-4o-mini OPENAI_API_KEY=... pytest tests/integration -m live
-    DOCSGEN_LIVE_PROVIDER=anthropic DOCSGEN_LIVE_MODEL=claude-3-5-haiku-latest ANTHROPIC_API_KEY=... pytest tests/integration -m live
-    DOCSGEN_LIVE_PROVIDER=bedrock DOCSGEN_LIVE_MODEL=us.amazon.nova-lite-v1:0 AWS_REGION=us-east-1 pytest tests/integration -m live
+Enable with, for example (then run ``pytest tests/integration -m live``):
+    DOCSGEN_LIVE_PROVIDER=openai DOCSGEN_LIVE_MODEL=gpt-4o-mini OPENAI_API_KEY=...
+    DOCSGEN_LIVE_PROVIDER=anthropic DOCSGEN_LIVE_MODEL=claude-3-5-haiku-latest ANTHROPIC_API_KEY=...
+    DOCSGEN_LIVE_PROVIDER=bedrock DOCSGEN_LIVE_MODEL=us.amazon.nova-lite-v1:0 AWS_REGION=us-east-1
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 
 import pytest
+
 from models.agent_models import TaskType
 from models.provider_models import ProviderConfig, ProviderId
 from services.workflow_service import WorkflowService
@@ -23,7 +24,10 @@ pytestmark = [
     pytest.mark.live,
     pytest.mark.skipif(
         not (PROVIDER and MODEL),
-        reason="Set DOCSGEN_LIVE_PROVIDER and DOCSGEN_LIVE_MODEL (plus the provider's credentials) to run live tests.",
+        reason=(
+            "Set DOCSGEN_LIVE_PROVIDER and DOCSGEN_LIVE_MODEL (plus the provider's"
+            " credentials) to run live tests."
+        ),
     ),
 ]
 
@@ -40,8 +44,7 @@ def live(container):
         else {}
     )
     if provider == ProviderId.OLLAMA:
-        settings["host"] = os.environ.get(
-            "OLLAMA_HOST", "http://localhost:11434")
+        settings["host"] = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
     cfg = ProviderConfig(
         provider=provider,
         model_id=MODEL,

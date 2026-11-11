@@ -21,6 +21,7 @@ _live_containers: weakref.WeakSet[ServiceContainer] = weakref.WeakSet()
 
 def get_container() -> ServiceContainer:
     import streamlit as st
+
     from services.container import ServiceContainer
 
     container = st.session_state.get(_CONTAINER_KEY)

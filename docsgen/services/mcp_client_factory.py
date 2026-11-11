@@ -15,15 +15,21 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
-from config import APP_NAME, APP_VERSION
 from mcp import StdioServerParameters, stdio_client
 from mcp.client.sse import sse_client
-from models.mcp_models import AuthType, MCPServerConfig, TransportType
-from services.mcp_credential_manager import (API_KEY, BEARER, OAUTH_SECRET,
-                                             MCPCredentialManager)
-from services.security import PolicyError, validate_stdio_command, validate_url
 from strands.tools.mcp import MCPClient
+
+from config import APP_NAME, APP_VERSION
+from models.mcp_models import AuthType, MCPServerConfig, TransportType
+from services.mcp_credential_manager import (
+    API_KEY,
+    BEARER,
+    OAUTH_SECRET,
+    MCPCredentialManager,
+)
+from services.security import PolicyError, validate_stdio_command, validate_url
 
 
 @dataclass
@@ -42,17 +48,16 @@ def validate_server_config(
     problems: list[str] = []
     try:
         if cfg.transport == TransportType.STDIO:
-            validate_stdio_command(
-                cfg.command or "", cfg.args, policy.stdio_allowlist)
+            validate_stdio_command(cfg.command or "", cfg.args, policy.stdio_allowlist)
             if cfg.cwd:
                 path = Path(cfg.cwd).expanduser()
                 if not path.is_dir():
-                    problems.append(
-                        f"Working directory does not exist: {cfg.cwd}")
+                    problems.append(f"Working directory does not exist: {cfg.cwd}")
             overlap = set(cfg.env) & set(cfg.secret_env_keys)
             if overlap:
                 problems.append(
-                    f"Variables defined both as plain and secret: {', '.join(sorted(overlap))}"
+                    "Variables defined both as plain and secret:"
+                    f" {', '.join(sorted(overlap))}"
                 )
         else:
             validate_url(
@@ -128,7 +133,7 @@ def build_client(
         # Server stderr goes to a per-server log file (shown, redacted, as diagnostics) instead of the app log.
         if stderr_path is not None:
             stderr_path.parent.mkdir(parents=True, exist_ok=True)
-            errlog = open(stderr_path, "w", encoding="utf-8")  # noqa: SIM115 - closed on disconnect
+            errlog = open(stderr_path, "w", encoding="utf-8")  # noqa: SIM115 - lives as long as the client
         else:
             errlog = open(os.devnull, "w")  # noqa: SIM115
 
@@ -143,7 +148,7 @@ def build_client(
     url = cfg.url or ""
 
     if cfg.transport == TransportType.STREAMABLE_HTTP:
-        auth = None
+        auth: dict[str, Any] | None = None
         if cfg.auth_type == AuthType.OAUTH_CLIENT_CREDENTIALS:
             auth = {
                 "client_id": cfg.oauth_client_id or "",
@@ -151,7 +156,6 @@ def build_client(
             }
             if cfg.oauth_scopes:
                 auth["scopes"] = list(cfg.oauth_scopes)
-        # type: ignore[arg-type]
         return MCPClient(url=url, headers=headers or None, auth=auth, **common)
 
     # Legacy SSE transport

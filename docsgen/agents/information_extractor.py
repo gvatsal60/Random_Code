@@ -3,15 +3,23 @@
 from __future__ import annotations
 
 from agents.base import GROUNDING_RULES, AgentSpec
-from agents.prompting import (compact_json, sources_digest, task_block,
-                              template_digest, user_answers_block)
-from models.agent_models import (AgentRole, ExtractionResult, TaskType,
-                                 TemplateAnalysis)
+from agents.prompting import (
+    compact_json,
+    sources_digest,
+    task_block,
+    template_digest,
+    user_answers_block,
+)
+from models.agent_models import AgentRole, ExtractionResult, TaskType, TemplateAnalysis
 from tools.context import DocumentContext
 
 SPEC = AgentSpec(
     role=AgentRole.INFORMATION_EXTRACTOR,
-    description="Extracts facts, dates, names and numbers from the sources, maps them to template sections and placeholders, and reports conflicts and missing information.",
+    description=(
+        "Extracts facts, dates, names and numbers from the sources, maps them to"
+        " template sections and placeholders, and reports conflicts and missing"
+        " information."
+    ),
     output_model=ExtractionResult,
     system_prompt=f"""\
 You are the Information Extraction agent in a document automation system.

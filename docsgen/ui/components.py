@@ -7,6 +7,7 @@ from collections.abc import Callable
 from typing import Any
 
 import streamlit as st
+
 from services.security import sanitize_error
 
 NAV_KEY = "nav_page"
@@ -80,8 +81,7 @@ def flash(message: str, kind: str = "success") -> None:
 def show_flashes() -> None:
     for kind, message in st.session_state.pop("_flash", []):
         getattr(
-            st, kind if kind in (
-                "success", "info", "warning", "error") else "info"
+            st, kind if kind in ("success", "info", "warning", "error") else "info"
         )(message)
 
 

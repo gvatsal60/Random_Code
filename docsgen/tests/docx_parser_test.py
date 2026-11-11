@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import docx
-from document_engine.template_parser import is_instructional, parse_template
 from docx.shared import Pt
+
+from document_engine.template_parser import is_instructional, parse_template
 
 
 def test_sections_and_headings(sample_template):
