@@ -20,7 +20,9 @@ DEMO_SERVER = ROOT / "mcp_servers" / "demo_server.py"
 
 def _ensure_samples() -> None:
     if not (SAMPLES / "sample_template.docx").exists():
-        subprocess.run([sys.executable, str(ROOT / "scripts" / "make_samples.py")], check=True)
+        subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "make_samples.py")], check=True
+        )
 
 
 _ensure_samples()
@@ -57,7 +59,14 @@ def sample_template(tmp_path) -> Path:
 def demo_stdio_config():
     from models.mcp_models import MCPServerConfig, TransportType
 
-    return MCPServerConfig(id="demo", name="Demo MCP", description="Bundled demo server", transport=TransportType.STDIO, command=sys.executable, args=[str(DEMO_SERVER)])
+    return MCPServerConfig(
+        id="demo",
+        name="Demo MCP",
+        description="Bundled demo server",
+        transport=TransportType.STDIO,
+        command=sys.executable,
+        args=[str(DEMO_SERVER)],
+    )
 
 
 def _free_port() -> int:
@@ -73,7 +82,12 @@ def demo_http_server():
     """Start the demo server over Streamable HTTP with a required bearer token."""
     port = _free_port()
     env = dict(os.environ, DEMO_MCP_TOKEN="test-token-0123456789")
-    proc = subprocess.Popen([sys.executable, str(DEMO_SERVER), "--http", "--port", str(port)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc = subprocess.Popen(
+        [sys.executable, str(DEMO_SERVER), "--http", "--port", str(port)],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
     deadline = time.time() + 20
     while time.time() < deadline:
         try:
@@ -89,12 +103,24 @@ def demo_http_server():
         proc.kill()
 
 
-def load_sources(container, names=("sample_source.txt", "sample_budget.csv", "sample_specification.pdf", "sample_budget.xlsx", "sample_company_profile.docx")):
+def load_sources(
+    container,
+    names=(
+        "sample_source.txt",
+        "sample_budget.csv",
+        "sample_specification.pdf",
+        "sample_budget.xlsx",
+        "sample_company_profile.docx",
+    ),
+):
     from services.file_service import ALLOWED_SOURCE_TYPES
 
     for name in names:
-        stored = container.files.store(name, (SAMPLES / name).read_bytes(), ALLOWED_SOURCE_TYPES)
-        doc = container.extraction.extract(stored, set(container.session.sources))
+        stored = container.files.store(
+            name, (SAMPLES / name).read_bytes(), ALLOWED_SOURCE_TYPES
+        )
+        doc = container.extraction.extract(
+            stored, set(container.session.sources))
         container.session.sources[doc.doc_id] = doc
 
 
@@ -103,5 +129,14 @@ def load_template(container):
     from services.container import UploadedTemplate
     from services.file_service import ALLOWED_TEMPLATE_TYPES
 
-    stored = container.files.store("sample_template.docx", (SAMPLES / "sample_template.docx").read_bytes(), ALLOWED_TEMPLATE_TYPES)
-    container.session.template = UploadedTemplate(stored.file_id, stored.original_name, stored.path, parse_template(stored.path, stored.original_name))
+    stored = container.files.store(
+        "sample_template.docx",
+        (SAMPLES / "sample_template.docx").read_bytes(),
+        ALLOWED_TEMPLATE_TYPES,
+    )
+    container.session.template = UploadedTemplate(
+        stored.file_id,
+        stored.original_name,
+        stored.path,
+        parse_template(stored.path, stored.original_name),
+    )

@@ -6,8 +6,8 @@ import io
 import zipfile
 
 import pytest
-
-from services.file_service import ALLOWED_SOURCE_TYPES, UploadRejected, sniff_and_validate
+from services.file_service import (ALLOWED_SOURCE_TYPES, UploadRejected,
+                                   sniff_and_validate)
 from tests.conftest import SAMPLES, load_sources
 from tools.text_extraction import extract_entities, search_chunks
 
@@ -17,7 +17,9 @@ def test_all_formats_extract_with_references(container):
     docs = {d.file_type: d for d in container.session.sources.values()}
     assert set(docs) == {"txt", "csv", "pdf", "xlsx", "docx"}
     txt = docs["txt"]
-    assert "Contoso Retail Group" in txt.text and txt.chunks[0].ref.location.startswith("lines 1-")
+    assert "Contoso Retail Group" in txt.text and txt.chunks[0].ref.location.startswith(
+        "lines 1-"
+    )
     assert "USD 248,000" in txt.entities.money
     pdf = docs["pdf"]
     assert pdf.pages == 2 and pdf.chunks[0].ref.location == "page 1"
@@ -30,20 +32,28 @@ def test_all_formats_extract_with_references(container):
     csv = docs["csv"]
     assert csv.tables[0].total_rows == 5
     profile = docs["docx"]
-    assert "Founded in 2014" in profile.text and "section 'Northwind Analytics" in profile.chunks[0].ref.location
+    assert (
+        "Founded in 2014" in profile.text
+        and "section 'Northwind Analytics" in profile.chunks[0].ref.location
+    )
 
 
 def test_entities():
-    e = extract_entities("Kick-off on 15 March 2026; budget USD 248,000 (8%). Contact a.b@example.com, Ref: NWA-2026-014. https://x.example/y")
+    e = extract_entities(
+        "Kick-off on 15 March 2026; budget USD 248,000 (8%). Contact a.b@example.com, Ref: NWA-2026-014. https://x.example/y"
+    )
     assert "15 March 2026" in e.dates
     assert "USD 248,000" in e.money and "8%" in e.percentages
-    assert e.emails == ["a.b@example.com"] and e.urls == ["https://x.example/y"]
+    assert e.emails == [
+        "a.b@example.com"] and e.urls == ["https://x.example/y"]
     assert any("NWA-2026-014" in r for r in e.references)
 
 
 def test_search(container):
-    load_sources(container, names=("sample_source.txt", "sample_specification.pdf"))
-    hits = search_chunks(container.document_context(), "availability target reporting")
+    load_sources(container, names=(
+        "sample_source.txt", "sample_specification.pdf"))
+    hits = search_chunks(container.document_context(),
+                         "availability target reporting")
     assert hits and hits[0][1].ref.file_name == "sample_specification.pdf"
 
 
@@ -73,11 +83,21 @@ def _zip(entries: dict[str, bytes]) -> bytes:
 def test_macro_and_traversal_and_bomb_rejected():
     base = {"[Content_Types].xml": b"<Types/>", "word/document.xml": b"<doc/>"}
     with pytest.raises(UploadRejected, match="Macro"):
-        sniff_and_validate("m.docx", _zip(base | {"word/vbaProject.bin": b"x"}), {"docx"}, 10**8)
+        sniff_and_validate(
+            "m.docx", _zip(
+                base | {"word/vbaProject.bin": b"x"}), {"docx"}, 10**8
+        )
     with pytest.raises(UploadRejected, match="unsafe"):
-        sniff_and_validate("t.docx", _zip(base | {"../evil.txt": b"x"}), {"docx"}, 10**8)
+        sniff_and_validate(
+            "t.docx", _zip(base | {"../evil.txt": b"x"}), {"docx"}, 10**8
+        )
     with pytest.raises(UploadRejected, match="ZIP bomb|too large"):
-        sniff_and_validate("b.docx", _zip(base | {"word/big.xml": b"0" * (20 * 1024 * 1024)}), {"docx"}, 10**8)
+        sniff_and_validate(
+            "b.docx",
+            _zip(base | {"word/big.xml": b"0" * (20 * 1024 * 1024)}),
+            {"docx"},
+            10**8,
+        )
 
 
 def test_size_limit():
@@ -86,5 +106,15 @@ def test_size_limit():
 
 
 def test_valid_samples_accepted():
-    for name in ("sample_template.docx", "sample_budget.xlsx", "sample_specification.pdf", "sample_source.txt"):
-        assert sniff_and_validate(name, (SAMPLES / name).read_bytes(), ALLOWED_SOURCE_TYPES, 10**8) == name.rsplit(".", 1)[1]
+    for name in (
+        "sample_template.docx",
+        "sample_budget.xlsx",
+        "sample_specification.pdf",
+        "sample_source.txt",
+    ):
+        assert (
+            sniff_and_validate(
+                name, (SAMPLES / name).read_bytes(), ALLOWED_SOURCE_TYPES, 10**8
+            )
+            == name.rsplit(".", 1)[1]
+        )

@@ -21,7 +21,6 @@ from pathlib import Path
 from typing import Protocol
 
 from cryptography.fernet import Fernet, InvalidToken
-
 from services.security import Redactor
 
 logger = logging.getLogger(__name__)
@@ -64,7 +63,8 @@ class MemoryCredentialStore:
 
 def _write_private(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".tmp-", suffix=path.suffix)
+    fd, tmp = tempfile.mkstemp(
+        dir=path.parent, prefix=".tmp-", suffix=path.suffix)
     try:
         os.write(fd, data)
     finally:
@@ -95,7 +95,8 @@ class EncryptedFileCredentialStore:
     def __init__(self, path: Path, key_file: Path) -> None:
         self.path = path
         self._fernet = Fernet(load_or_create_master_key(key_file))
-        self._lock = self._locks.setdefault(str(path.resolve()), threading.Lock())
+        self._lock = self._locks.setdefault(
+            str(path.resolve()), threading.Lock())
 
     def _read(self) -> dict[str, str]:
         if not self.path.exists():
@@ -113,7 +114,8 @@ class EncryptedFileCredentialStore:
         return data
 
     def _write(self, data: dict[str, str]) -> None:
-        token = self._fernet.encrypt(json.dumps(data, sort_keys=True).encode("utf-8"))
+        token = self._fernet.encrypt(json.dumps(
+            data, sort_keys=True).encode("utf-8"))
         _write_private(self.path, token)
 
     def get(self, key: str) -> str | None:
@@ -150,7 +152,11 @@ class EncryptedFileCredentialStore:
 class LayeredCredentialStore:
     """Session values override persistent ones; writes go to the requested layer."""
 
-    def __init__(self, session: MemoryCredentialStore, persistent: EncryptedFileCredentialStore | None) -> None:
+    def __init__(
+        self,
+        session: MemoryCredentialStore,
+        persistent: EncryptedFileCredentialStore | None,
+    ) -> None:
         self.session = session
         self.persistent = persistent
 
@@ -170,7 +176,8 @@ class LayeredCredentialStore:
     def set(self, key: str, value: str, persist: bool) -> None:
         if persist:
             if self.persistent is None:
-                raise RuntimeError("Persistent credential storage is not available.")
+                raise RuntimeError(
+                    "Persistent credential storage is not available.")
             self.persistent.set(key, value)
             self.session.delete(key)
         else:

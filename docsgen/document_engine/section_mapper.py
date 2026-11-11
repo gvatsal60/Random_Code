@@ -13,11 +13,18 @@ from models.document_models import TemplateSection, TemplateStructure
 
 
 def _norm(text: str) -> str:
-    text = re.sub(r"^\s*(\d+(\.\d+)*[.)]?|chapter\s+\d+[:.]?)\s*", "", text.strip(), flags=re.I)
+    text = re.sub(
+        r"^\s*(\d+(\.\d+)*[.)]?|chapter\s+\d+[:.]?)\s*",
+        "",
+        text.strip(),
+        flags=re.IGNORECASE,
+    )
     return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
 
 
-def resolve_target(structure: TemplateStructure, target: str, target_type: str | None = None) -> tuple[str, str] | None:
+def resolve_target(
+    structure: TemplateStructure, target: str, target_type: str | None = None
+) -> tuple[str, str] | None:
     """Return (target_type, canonical_target) or None if the target does not exist in the template."""
     raw = (target or "").strip()
     if not raw:
@@ -37,7 +44,8 @@ def resolve_target(structure: TemplateStructure, target: str, target_type: str |
         wanted = _norm(raw)
         best, score = None, 0.0
         for s in structure.sections:
-            ratio = difflib.SequenceMatcher(None, wanted, _norm(s.title)).ratio()
+            ratio = difflib.SequenceMatcher(
+                None, wanted, _norm(s.title)).ratio()
             if ratio > score:
                 best, score = s, ratio
         if best is not None and score >= 0.8:
@@ -55,7 +63,9 @@ def needs_content(section: TemplateSection) -> bool:
     return not section.has_real_content or bool(section.instructional_blocks)
 
 
-def default_targets(structure: TemplateStructure, include_sections_with_content: bool = False) -> list[str]:
+def default_targets(
+    structure: TemplateStructure, include_sections_with_content: bool = False
+) -> list[str]:
     targets = [f"{{{{{p.key}}}}}" for p in structure.placeholders]
     for s in fillable_sections(structure):
         if include_sections_with_content or needs_content(s):

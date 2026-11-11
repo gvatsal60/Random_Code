@@ -6,9 +6,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, Field
-
 from models.document_models import SourceRef
+from pydantic import BaseModel, Field
 
 
 class AgentRole(str, Enum):
@@ -36,28 +35,44 @@ TargetType = Literal["section", "placeholder"]
 class SectionRequirement(BaseModel):
     """What a template section needs."""
 
-    section_id: str = Field(description="Section identifier exactly as given in the template outline, e.g. s03.")
+    section_id: str = Field(
+        description="Section identifier exactly as given in the template outline, e.g. s03."
+    )
     title: str
-    purpose: str = Field(description="One sentence describing what this section should contain.")
-    required_information: list[str] = Field(default_factory=list, description="Specific facts this section needs.")
+    purpose: str = Field(
+        description="One sentence describing what this section should contain."
+    )
+    required_information: list[str] = Field(
+        default_factory=list, description="Specific facts this section needs."
+    )
     expected_length: Literal["short", "medium", "long"] = "medium"
-    should_fill: bool = Field(default=True, description="False for sections that must stay unchanged (e.g. cover, table of contents).")
+    should_fill: bool = Field(
+        default=True,
+        description="False for sections that must stay unchanged (e.g. cover, table of contents).",
+    )
 
 
 class PlaceholderRequirement(BaseModel):
-    key: str = Field(description="Placeholder key without braces, exactly as listed.")
+    key: str = Field(
+        description="Placeholder key without braces, exactly as listed.")
     description: str
-    expected_type: Literal["text", "date", "number", "currency", "name", "paragraph", "other"] = "text"
+    expected_type: Literal[
+        "text", "date", "number", "currency", "name", "paragraph", "other"
+    ] = "text"
 
 
 class TemplateAnalysis(BaseModel):
     """Output of the Document Analyzer."""
 
-    document_type: str = Field(description="What kind of document the template is, e.g. 'project proposal'.")
+    document_type: str = Field(
+        description="What kind of document the template is, e.g. 'project proposal'."
+    )
     summary: str
     sections: list[SectionRequirement] = Field(default_factory=list)
     placeholders: list[PlaceholderRequirement] = Field(default_factory=list)
-    writing_style: str = Field(default="", description="Observed tone, person and terminology to follow.")
+    writing_style: str = Field(
+        default="", description="Observed tone, person and terminology to follow."
+    )
     notes: list[str] = Field(default_factory=list)
 
 
@@ -65,15 +80,33 @@ class TemplateAnalysis(BaseModel):
 class Fact(BaseModel):
     fact_id: str = Field(description="Short unique id such as F1, F2.")
     statement: str = Field(description="The fact as a complete sentence.")
-    value: str | None = Field(default=None, description="The key value (date, amount, name) if any.")
-    category: Literal["date", "number", "money", "name", "organization", "reference", "requirement", "other"] = "other"
-    source_chunk_ids: list[str] = Field(default_factory=list, description="Chunk ids (e.g. D1-C3) the fact was taken from.")
+    value: str | None = Field(
+        default=None, description="The key value (date, amount, name) if any."
+    )
+    category: Literal[
+        "date",
+        "number",
+        "money",
+        "name",
+        "organization",
+        "reference",
+        "requirement",
+        "other",
+    ] = "other"
+    source_chunk_ids: list[str] = Field(
+        default_factory=list,
+        description="Chunk ids (e.g. D1-C3) the fact was taken from.",
+    )
     confidence: Literal["high", "medium", "low"] = "medium"
-    sources: list[SourceRef] = Field(default_factory=list, description="Filled in by the application; leave empty.")
+    sources: list[SourceRef] = Field(
+        default_factory=list, description="Filled in by the application; leave empty."
+    )
 
 
 class SectionMapping(BaseModel):
-    target: str = Field(description="Section id (e.g. s04) or placeholder key (e.g. company_name).")
+    target: str = Field(
+        description="Section id (e.g. s04) or placeholder key (e.g. company_name)."
+    )
     target_type: Literal["section", "placeholder"]
     fact_ids: list[str] = Field(default_factory=list)
     notes: str = ""
@@ -85,10 +118,15 @@ class Conflict(BaseModel):
 
 
 class MissingInfo(BaseModel):
-    target: str = Field(description="Section id or placeholder key that lacks information.")
+    target: str = Field(
+        description="Section id or placeholder key that lacks information."
+    )
     description: str
     critical: bool = False
-    question_for_user: str = Field(default="", description="A precise question the user can answer to fill the gap.")
+    question_for_user: str = Field(
+        default="",
+        description="A precise question the user can answer to fill the gap.",
+    )
 
 
 class ExtractionResult(BaseModel):
@@ -104,7 +142,9 @@ class ExtractionResult(BaseModel):
 # ------------------------------------------------------------------------ Agent 3: Research
 class ResearchFinding(BaseModel):
     statement: str
-    verified: bool = Field(description="True only if confirmed by a cited source returned by a tool.")
+    verified: bool = Field(
+        description="True only if confirmed by a cited source returned by a tool."
+    )
     citation_title: str | None = None
     citation_url: str | None = None
     tool_used: str | None = None
@@ -120,7 +160,8 @@ class ResearchResult(BaseModel):
 
 # -------------------------------------------------------------------- Agent 4: Generation
 class GeneratedSection(BaseModel):
-    target: str = Field(description="Section id (e.g. s04) or placeholder key.")
+    target: str = Field(
+        description="Section id (e.g. s04) or placeholder key.")
     target_type: Literal["section", "placeholder"]
     title: str = ""
     content: str = Field(
@@ -130,8 +171,13 @@ class GeneratedSection(BaseModel):
         )
     )
     fact_ids: list[str] = Field(default_factory=list)
-    unsupported_claims: list[str] = Field(default_factory=list, description="Statements you could not support from sources.")
-    needs_user_input: list[str] = Field(default_factory=list, description="Information still required from the user.")
+    unsupported_claims: list[str] = Field(
+        default_factory=list,
+        description="Statements you could not support from sources.",
+    )
+    needs_user_input: list[str] = Field(
+        default_factory=list, description="Information still required from the user."
+    )
 
 
 class GenerationResult(BaseModel):
@@ -142,7 +188,16 @@ class GenerationResult(BaseModel):
 class ValidationIssue(BaseModel):
     severity: Literal["error", "warning", "info"]
     target: str | None = None
-    category: Literal["missing", "inconsistency", "number", "date", "duplicate", "unsupported", "placeholder", "other"] = "other"
+    category: Literal[
+        "missing",
+        "inconsistency",
+        "number",
+        "date",
+        "duplicate",
+        "unsupported",
+        "placeholder",
+        "other",
+    ] = "other"
     message: str
     suggestion: str = ""
 
@@ -157,7 +212,9 @@ class ValidationReport(BaseModel):
 # ------------------------------------------------------------------ Agent 6: Quality review
 class QualityRevision(BaseModel):
     target: str
-    revised_content: str = Field(description="Full improved content for the target. Must not add new facts.")
+    revised_content: str = Field(
+        description="Full improved content for the target. Must not add new facts."
+    )
     rationale: str
 
 
@@ -310,8 +367,23 @@ class WorkflowState(BaseModel):
     agent_runs: list[AgentRunRecord] = Field(default_factory=list)
     last_error: str | None = None
 
-    def log(self, step: str, message: str, level: str = "info", agent: AgentRole | None = None, duration_ms: int | None = None) -> None:
-        self.events.append(WorkflowEvent(step=step, message=message, level=level, agent=agent, duration_ms=duration_ms))  # type: ignore[arg-type]
+    def log(
+        self,
+        step: str,
+        message: str,
+        level: str = "info",
+        agent: AgentRole | None = None,
+        duration_ms: int | None = None,
+    ) -> None:
+        self.events.append(
+            WorkflowEvent(
+                step=step,
+                message=message,
+                level=level,
+                agent=agent,
+                duration_ms=duration_ms,
+            )
+        )  # type: ignore[arg-type]
 
     @property
     def approved_drafts(self) -> list[SectionDraft]:

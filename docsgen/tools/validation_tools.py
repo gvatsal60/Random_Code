@@ -7,10 +7,9 @@ import difflib
 import json
 import re
 
-from strands import tool
-
 from document_engine.placeholder_manager import PLACEHOLDER_RE
 from models.agent_models import SectionDraft, ValidationIssue
+from strands import tool
 from tools.context import DocumentContext
 from tools.text_extraction import DATE_RE, MONEY_RE, NUMBER_RE, PERCENT_RE
 
@@ -25,20 +24,27 @@ def _normalize_number(value: str) -> str:
 
 
 def _source_numbers(ctx: DocumentContext, extra_text: str = "") -> set[str]:
-    corpus = "\n".join(d.text for d in ctx.sources.values()) + "\n" + extra_text
+    corpus = "\n".join(d.text for d in ctx.sources.values()
+                       ) + "\n" + extra_text
     found = {_normalize_number(n) for n in NUMBER_RE.findall(corpus)}
     found |= {_normalize_number(m) for m in MONEY_RE.findall(corpus)}
     # thousands written as "248k" or "USD 248,000" -> both forms
     return {n for n in found if n}
 
 
-def verify_values(text: str, ctx: DocumentContext, trusted_text: str = "") -> dict[str, list[str]]:
+def verify_values(
+    text: str, ctx: DocumentContext, trusted_text: str = ""
+) -> dict[str, list[str]]:
     """Check that numbers, amounts, percentages and dates in ``text`` appear in the sources or user answers."""
-    corpus = ("\n".join(d.text for d in ctx.sources.values()) + "\n" + trusted_text).lower()
+    corpus = (
+        "\n".join(d.text for d in ctx.sources.values()) + "\n" + trusted_text
+    ).lower()
     numbers = _source_numbers(ctx, trusted_text)
     supported, unsupported = [], []
     candidates = set(MONEY_RE.findall(text)) | set(PERCENT_RE.findall(text))
-    candidates |= {n for n in NUMBER_RE.findall(text) if len(_normalize_number(n)) >= 3 or "," in n}
+    candidates |= {
+        n for n in NUMBER_RE.findall(text) if len(_normalize_number(n)) >= 3 or "," in n
+    }
     for value in sorted(candidates):
         norm = _normalize_number(value)
         ok = value.lower() in corpus or (norm and norm in numbers)
@@ -48,7 +54,9 @@ def verify_values(text: str, ctx: DocumentContext, trusted_text: str = "") -> di
     return {"supported": supported, "unsupported": unsupported}
 
 
-def duplicate_sentences(texts: dict[str, str], min_len: int = 40) -> list[tuple[str, list[str]]]:
+def duplicate_sentences(
+    texts: dict[str, str], min_len: int = 40
+) -> list[tuple[str, list[str]]]:
     seen: dict[str, list[str]] = {}
     for target, text in texts.items():
         for sentence in _SENTENCE.split(text or ""):
@@ -64,8 +72,14 @@ def readability(text: str) -> dict[str, float]:
     sentences = [s for s in _SENTENCE.split(text.strip()) if s.strip()]
     words = re.findall(r"[A-Za-z]+", text)
     if not sentences or not words:
-        return {"sentences": 0, "words": 0, "avg_sentence_words": 0.0, "flesch_reading_ease": 0.0}
-    syllables = sum(max(1, len(re.findall(r"[aeiouy]+", w.lower()))) for w in words)
+        return {
+            "sentences": 0,
+            "words": 0,
+            "avg_sentence_words": 0.0,
+            "flesch_reading_ease": 0.0,
+        }
+    syllables = sum(
+        max(1, len(re.findall(r"[aeiouy]+", w.lower()))) for w in words)
     asl = len(words) / len(sentences)
     asw = syllables / len(words)
     return {
@@ -76,7 +90,11 @@ def readability(text: str) -> dict[str, float]:
     }
 
 
-def deterministic_checks(drafts: list[SectionDraft], ctx: DocumentContext, user_answers: dict[str, str] | None = None) -> list[ValidationIssue]:
+def deterministic_checks(
+    drafts: list[SectionDraft],
+    ctx: DocumentContext,
+    user_answers: dict[str, str] | None = None,
+) -> list[ValidationIssue]:
     """Checks that do not need an LLM. Run before every final generation."""
     issues: list[ValidationIssue] = []
     trusted = "\n".join((user_answers or {}).values())
@@ -84,13 +102,34 @@ def deterministic_checks(drafts: list[SectionDraft], ctx: DocumentContext, user_
     for d in active:
         content = d.content.strip()
         if not content:
-            issues.append(ValidationIssue(severity="error", target=d.target, category="missing", message="Content is empty."))
+            issues.append(
+                ValidationIssue(
+                    severity="error",
+                    target=d.target,
+                    category="missing",
+                    message="Content is empty.",
+                )
+            )
             continue
         left = PLACEHOLDER_RE.findall(content)
         if left:
-            issues.append(ValidationIssue(severity="warning", target=d.target, category="placeholder", message=f"Content still contains placeholders: {', '.join(sorted(set(left)))}."))
-        if re.search(r"\[(?:insert|tbd|todo|missing)[^\]]*\]", content, re.I):
-            issues.append(ValidationIssue(severity="warning", target=d.target, category="missing", message="Content contains a gap marker such as [TBD] or [Insert …]."))
+            issues.append(
+                ValidationIssue(
+                    severity="warning",
+                    target=d.target,
+                    category="placeholder",
+                    message=f"Content still contains placeholders: {', '.join(sorted(set(left)))}.",
+                )
+            )
+        if re.search(r"\[(?:insert|tbd|todo|missing)[^\]]*\]", content, re.IGNORECASE):
+            issues.append(
+                ValidationIssue(
+                    severity="warning",
+                    target=d.target,
+                    category="missing",
+                    message="Content contains a gap marker such as [TBD] or [Insert …].",
+                )
+            )
         values = verify_values(content, ctx, trusted)
         if values["unsupported"]:
             issues.append(
@@ -103,12 +142,19 @@ def deterministic_checks(drafts: list[SectionDraft], ctx: DocumentContext, user_
                 )
             )
     for sentence, targets in duplicate_sentences({d.target: d.content for d in active}):
-        issues.append(ValidationIssue(severity="info", target=", ".join(targets), category="duplicate", message=f"Repeated sentence: \"{sentence[:120]}…\""))
+        issues.append(
+            ValidationIssue(
+                severity="info",
+                target=", ".join(targets),
+                category="duplicate",
+                message=f'Repeated sentence: "{sentence[:120]}…"',
+            )
+        )
     return issues
 
 
 # ------------------------------------------------------------------------------- tools
-def make_verify_values_in_sources(ctx: DocumentContext):  # noqa: ANN201
+def make_verify_values_in_sources(ctx: DocumentContext):
     @tool(name="verify_values_in_sources")
     def verify_values_in_sources(text: str) -> str:
         """Check whether the numbers, amounts, percentages and dates in a text appear in the uploaded sources.
@@ -121,7 +167,7 @@ def make_verify_values_in_sources(ctx: DocumentContext):  # noqa: ANN201
     return verify_values_in_sources
 
 
-def make_find_duplicate_content(ctx: DocumentContext):  # noqa: ANN201, ARG001
+def make_find_duplicate_content(ctx: DocumentContext):
     @tool(name="find_duplicate_content")
     def find_duplicate_content(sections_json: str) -> str:
         """Find sentences repeated across sections.
@@ -136,12 +182,17 @@ def make_find_duplicate_content(ctx: DocumentContext):  # noqa: ANN201, ARG001
         except ValueError:
             return "sections_json must be a JSON object of {target: text}."
         dups = duplicate_sentences({str(k): str(v) for k, v in texts.items()})
-        return json.dumps([{"sentence": s, "targets": t} for s, t in dups], indent=1) if dups else "No duplicated sentences found."
+        return (
+            json.dumps([{"sentence": s, "targets": t}
+                       for s, t in dups], indent=1)
+            if dups
+            else "No duplicated sentences found."
+        )
 
     return find_duplicate_content
 
 
-def make_check_placeholders(ctx: DocumentContext):  # noqa: ANN201, ARG001
+def make_check_placeholders(ctx: DocumentContext):
     @tool(name="check_remaining_placeholders")
     def check_remaining_placeholders(text: str) -> str:
         """List {{placeholders}} and gap markers ([TBD], [Insert …]) that remain in a text.
@@ -150,13 +201,14 @@ def make_check_placeholders(ctx: DocumentContext):  # noqa: ANN201, ARG001
             text: The text to check.
         """
         found = sorted(set(PLACEHOLDER_RE.findall(text)))
-        gaps = re.findall(r"\[(?:insert|tbd|todo|missing)[^\]]*\]", text, re.I)
+        gaps = re.findall(
+            r"\[(?:insert|tbd|todo|missing)[^\]]*\]", text, re.IGNORECASE)
         return json.dumps({"placeholders": found, "gap_markers": gaps})
 
     return check_remaining_placeholders
 
 
-def make_compare_texts(ctx: DocumentContext):  # noqa: ANN201, ARG001
+def make_compare_texts(ctx: DocumentContext):
     @tool(name="compare_texts")
     def compare_texts(original: str, revised: str) -> str:
         """Compare two texts: similarity ratio and a compact unified diff.
@@ -166,13 +218,19 @@ def make_compare_texts(ctx: DocumentContext):  # noqa: ANN201, ARG001
             revised: The revised text.
         """
         ratio = difflib.SequenceMatcher(None, original, revised).ratio()
-        diff = "\n".join(difflib.unified_diff(original.splitlines(), revised.splitlines(), lineterm="", n=0))
-        return json.dumps({"similarity": round(ratio, 3), "diff": diff[:6000]}, indent=1)
+        diff = "\n".join(
+            difflib.unified_diff(
+                original.splitlines(), revised.splitlines(), lineterm="", n=0
+            )
+        )
+        return json.dumps(
+            {"similarity": round(ratio, 3), "diff": diff[:6000]}, indent=1
+        )
 
     return compare_texts
 
 
-def make_readability_stats(ctx: DocumentContext):  # noqa: ANN201, ARG001
+def make_readability_stats(ctx: DocumentContext):
     @tool(name="readability_stats")
     def readability_stats(text: str) -> str:
         """Readability statistics: sentence count, words, average sentence length and Flesch reading ease.

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from agents.base import AgentSpec
 from agents.prompting import compact_json, task_block
-from models.agent_models import AgentRole, ExtractionResult, ResearchResult, TaskType
+from models.agent_models import (AgentRole, ExtractionResult, ResearchResult,
+                                 TaskType)
 
 SPEC = AgentSpec(
     role=AgentRole.RESEARCH_AGENT,
@@ -27,17 +28,38 @@ Never fabricate citations or URLs.
 )
 
 
-def build_prompt(task: TaskType, instructions: str, extraction: ExtractionResult | None, topics: str, tool_names: list[str]) -> str:
+def build_prompt(
+    task: TaskType,
+    instructions: str,
+    extraction: ExtractionResult | None,
+    topics: str,
+    tool_names: list[str],
+) -> str:
     questions = []
     if extraction is not None:
-        questions = [f"- [{m.target}] {m.question_for_user or m.description}" for m in extraction.missing]
+        questions = [
+            f"- [{m.target}] {m.question_for_user or m.description}"
+            for m in extraction.missing
+        ]
     parts = [task_block(task, instructions)]
-    parts.append("AVAILABLE TOOLS: " + (", ".join(tool_names) if tool_names else "none"))
+    parts.append(
+        "AVAILABLE TOOLS: " + (", ".join(tool_names) if tool_names else "none")
+    )
     if topics.strip():
-        parts.append("RESEARCH TOPICS REQUESTED BY THE USER:\n" + topics.strip()[:4000])
+        parts.append("RESEARCH TOPICS REQUESTED BY THE USER:\n" +
+                     topics.strip()[:4000])
     if questions:
-        parts.append("OPEN QUESTIONS FROM EXTRACTION (research only those that are public knowledge):\n" + "\n".join(questions[:30]))
+        parts.append(
+            "OPEN QUESTIONS FROM EXTRACTION (research only those that are public knowledge):\n"
+            + "\n".join(questions[:30])
+        )
     if extraction is not None and extraction.facts:
-        parts.append("KNOWN FACTS (context only):\n" + compact_json(extraction.model_copy(update={"mappings": [], "missing": []}), 8_000))
+        parts.append(
+            "KNOWN FACTS (context only):\n"
+            + compact_json(
+                extraction.model_copy(
+                    update={"mappings": [], "missing": []}), 8_000
+            )
+        )
     parts.append("Return the ResearchResult.")
     return "\n\n".join(parts)

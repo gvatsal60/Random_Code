@@ -13,9 +13,9 @@ import logging
 from pathlib import Path
 
 import httpx
-
 from config import PROJECT_ROOT
-from models.provider_models import DiscoveryResult, FieldSpec, ProviderConfig, ProviderId, ProviderSpec
+from models.provider_models import (DiscoveryResult, FieldSpec, ProviderConfig,
+                                    ProviderId, ProviderSpec)
 from services.security import sanitize_error, validate_url
 
 logger = logging.getLogger(__name__)
@@ -49,9 +49,22 @@ PROVIDER_SPECS: dict[ProviderId, ProviderSpec] = {
         supports_discovery=True,
         docs_url="https://strandsagents.com/latest/documentation/docs/user-guide/concepts/model-providers/openai/",
         fields=[
-            FieldSpec(key="api_key", label="API key", kind="secret", required=True, env_var="OPENAI_API_KEY"),
-            FieldSpec(key="base_url", label="Base URL (optional)", kind="url", help="Leave empty for api.openai.com."),
-            FieldSpec(key="organization", label="Organization ID (optional)", kind="text"),
+            FieldSpec(
+                key="api_key",
+                label="API key",
+                kind="secret",
+                required=True,
+                env_var="OPENAI_API_KEY",
+            ),
+            FieldSpec(
+                key="base_url",
+                label="Base URL (optional)",
+                kind="url",
+                help="Leave empty for api.openai.com.",
+            ),
+            FieldSpec(
+                key="organization", label="Organization ID (optional)", kind="text"
+            ),
             _TOKEN_PARAM,
             _SEND_TEMPERATURE,
         ],
@@ -65,7 +78,15 @@ PROVIDER_SPECS: dict[ProviderId, ProviderSpec] = {
         pip_extra="anthropic",
         supports_discovery=True,
         docs_url="https://strandsagents.com/latest/documentation/docs/user-guide/concepts/model-providers/anthropic/",
-        fields=[FieldSpec(key="api_key", label="API key", kind="secret", required=True, env_var="ANTHROPIC_API_KEY")],
+        fields=[
+            FieldSpec(
+                key="api_key",
+                label="API key",
+                kind="secret",
+                required=True,
+                env_var="ANTHROPIC_API_KEY",
+            )
+        ],
     ),
     ProviderId.GEMINI: ProviderSpec(
         id=ProviderId.GEMINI,
@@ -76,7 +97,15 @@ PROVIDER_SPECS: dict[ProviderId, ProviderSpec] = {
         pip_extra="gemini",
         supports_discovery=True,
         docs_url="https://strandsagents.com/latest/documentation/docs/user-guide/concepts/model-providers/gemini/",
-        fields=[FieldSpec(key="api_key", label="API key", kind="secret", required=True, env_var="GOOGLE_API_KEY")],
+        fields=[
+            FieldSpec(
+                key="api_key",
+                label="API key",
+                kind="secret",
+                required=True,
+                env_var="GOOGLE_API_KEY",
+            )
+        ],
     ),
     ProviderId.BEDROCK: ProviderSpec(
         id=ProviderId.BEDROCK,
@@ -93,17 +122,59 @@ PROVIDER_SPECS: dict[ProviderId, ProviderSpec] = {
                 key="auth_mode",
                 label="Authentication",
                 kind="select",
-                options=["default_chain", "access_keys", "profile", "assume_role", "bedrock_api_key"],
+                options=[
+                    "default_chain",
+                    "access_keys",
+                    "profile",
+                    "assume_role",
+                    "bedrock_api_key",
+                ],
                 default="default_chain",
                 help="default_chain uses the standard AWS credential chain (environment, shared config, instance/task role).",
             ),
-            FieldSpec(key="region", label="AWS Region", kind="text", required=True, default="us-east-1"),
-            FieldSpec(key="aws_access_key_id", label="AWS Access Key ID", kind="secret", show_if={"auth_mode": ["access_keys", "assume_role"]}),
-            FieldSpec(key="aws_secret_access_key", label="AWS Secret Access Key", kind="secret", show_if={"auth_mode": ["access_keys", "assume_role"]}),
-            FieldSpec(key="aws_session_token", label="AWS Session Token (optional)", kind="secret", show_if={"auth_mode": ["access_keys", "assume_role"]}),
-            FieldSpec(key="profile_name", label="AWS profile name", kind="text", show_if={"auth_mode": ["profile", "assume_role"]}),
-            FieldSpec(key="role_arn", label="IAM role ARN to assume", kind="text", show_if={"auth_mode": ["assume_role"]}),
-            FieldSpec(key="bedrock_api_key", label="Bedrock API key", kind="secret", show_if={"auth_mode": ["bedrock_api_key"]}),
+            FieldSpec(
+                key="region",
+                label="AWS Region",
+                kind="text",
+                required=True,
+                default="us-east-1",
+            ),
+            FieldSpec(
+                key="aws_access_key_id",
+                label="AWS Access Key ID",
+                kind="secret",
+                show_if={"auth_mode": ["access_keys", "assume_role"]},
+            ),
+            FieldSpec(
+                key="aws_secret_access_key",
+                label="AWS Secret Access Key",
+                kind="secret",
+                show_if={"auth_mode": ["access_keys", "assume_role"]},
+            ),
+            FieldSpec(
+                key="aws_session_token",
+                label="AWS Session Token (optional)",
+                kind="secret",
+                show_if={"auth_mode": ["access_keys", "assume_role"]},
+            ),
+            FieldSpec(
+                key="profile_name",
+                label="AWS profile name",
+                kind="text",
+                show_if={"auth_mode": ["profile", "assume_role"]},
+            ),
+            FieldSpec(
+                key="role_arn",
+                label="IAM role ARN to assume",
+                kind="text",
+                show_if={"auth_mode": ["assume_role"]},
+            ),
+            FieldSpec(
+                key="bedrock_api_key",
+                label="Bedrock API key",
+                kind="secret",
+                show_if={"auth_mode": ["bedrock_api_key"]},
+            ),
         ],
     ),
     ProviderId.OLLAMA: ProviderSpec(
@@ -115,7 +186,15 @@ PROVIDER_SPECS: dict[ProviderId, ProviderSpec] = {
         pip_extra="ollama",
         supports_discovery=True,
         docs_url="https://strandsagents.com/latest/documentation/docs/user-guide/concepts/model-providers/ollama/",
-        fields=[FieldSpec(key="host", label="Server URL", kind="url", required=True, default="http://localhost:11434")],
+        fields=[
+            FieldSpec(
+                key="host",
+                label="Server URL",
+                kind="url",
+                required=True,
+                default="http://localhost:11434",
+            )
+        ],
     ),
     ProviderId.LITELLM: ProviderSpec(
         id=ProviderId.LITELLM,
@@ -127,9 +206,19 @@ PROVIDER_SPECS: dict[ProviderId, ProviderSpec] = {
         model_hint="Format: provider/model, e.g. groq/llama-3.3-70b-versatile",
         docs_url="https://strandsagents.com/latest/documentation/docs/user-guide/concepts/model-providers/litellm/",
         fields=[
-            FieldSpec(key="api_key", label="API key", kind="secret", help="Passed to LiteLLM as api_key."),
-            FieldSpec(key="api_base", label="API base URL (optional)", kind="url"),
-            FieldSpec(key="api_version", label="API version (optional, e.g. Azure)", kind="text"),
+            FieldSpec(
+                key="api_key",
+                label="API key",
+                kind="secret",
+                help="Passed to LiteLLM as api_key.",
+            ),
+            FieldSpec(key="api_base",
+                      label="API base URL (optional)", kind="url"),
+            FieldSpec(
+                key="api_version",
+                label="API version (optional, e.g. Azure)",
+                kind="text",
+            ),
         ],
     ),
     ProviderId.MISTRAL: ProviderSpec(
@@ -141,7 +230,15 @@ PROVIDER_SPECS: dict[ProviderId, ProviderSpec] = {
         pip_extra="mistral",
         supports_discovery=True,
         docs_url="https://strandsagents.com/latest/documentation/docs/user-guide/concepts/model-providers/mistral/",
-        fields=[FieldSpec(key="api_key", label="API key", kind="secret", required=True, env_var="MISTRAL_API_KEY")],
+        fields=[
+            FieldSpec(
+                key="api_key",
+                label="API key",
+                kind="secret",
+                required=True,
+                env_var="MISTRAL_API_KEY",
+            )
+        ],
     ),
     ProviderId.WRITER: ProviderSpec(
         id=ProviderId.WRITER,
@@ -151,7 +248,15 @@ PROVIDER_SPECS: dict[ProviderId, ProviderSpec] = {
         strands_class="WriterModel",
         pip_extra="writer",
         docs_url="https://strandsagents.com/latest/documentation/docs/user-guide/concepts/model-providers/writer/",
-        fields=[FieldSpec(key="api_key", label="API key", kind="secret", required=True, env_var="WRITER_API_KEY")],
+        fields=[
+            FieldSpec(
+                key="api_key",
+                label="API key",
+                kind="secret",
+                required=True,
+                env_var="WRITER_API_KEY",
+            )
+        ],
     ),
     ProviderId.LLAMAAPI: ProviderSpec(
         id=ProviderId.LLAMAAPI,
@@ -161,7 +266,15 @@ PROVIDER_SPECS: dict[ProviderId, ProviderSpec] = {
         strands_class="LlamaAPIModel",
         pip_extra="llamaapi",
         docs_url="https://strandsagents.com/latest/documentation/docs/user-guide/concepts/model-providers/llamaapi/",
-        fields=[FieldSpec(key="api_key", label="API key", kind="secret", required=True, env_var="LLAMA_API_KEY")],
+        fields=[
+            FieldSpec(
+                key="api_key",
+                label="API key",
+                kind="secret",
+                required=True,
+                env_var="LLAMA_API_KEY",
+            )
+        ],
     ),
     ProviderId.LLAMACPP: ProviderSpec(
         id=ProviderId.LLAMACPP,
@@ -172,7 +285,15 @@ PROVIDER_SPECS: dict[ProviderId, ProviderSpec] = {
         pip_extra="",
         supports_discovery=True,
         docs_url="https://strandsagents.com/latest/documentation/docs/user-guide/concepts/model-providers/llamacpp/",
-        fields=[FieldSpec(key="base_url", label="Server URL", kind="url", required=True, default="http://localhost:8080")],
+        fields=[
+            FieldSpec(
+                key="base_url",
+                label="Server URL",
+                kind="url",
+                required=True,
+                default="http://localhost:8080",
+            )
+        ],
     ),
 }
 
@@ -188,7 +309,9 @@ def list_specs() -> list[ProviderSpec]:
 def is_installed(spec: ProviderSpec) -> bool:
     """Whether the provider's Strands module and SDK dependency can be imported."""
     try:
-        return importlib.util.find_spec(spec.strands_module) is not None and _sdk_available(spec)
+        return importlib.util.find_spec(
+            spec.strands_module
+        ) is not None and _sdk_available(spec)
     except (ImportError, ValueError):
         return False
 
@@ -219,14 +342,22 @@ def _sdk_available(spec: ProviderSpec) -> bool:
 
 def install_hint(spec: ProviderSpec) -> str:
     extra = spec.pip_extra
-    return f'pip install "strands-agents[{extra}]"' if extra else "pip install strands-agents boto3"
+    return (
+        f'pip install "strands-agents[{extra}]"'
+        if extra
+        else "pip install strands-agents boto3"
+    )
 
 
 # ---------------------------------------------------------------------------------- Catalog
 def load_catalog(path: Path = CATALOG_PATH) -> dict[str, list[str]]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        return {k: [str(m) for m in v] for k, v in data.items() if not k.startswith("_") and isinstance(v, list)}
+        return {
+            k: [str(m) for m in v]
+            for k, v in data.items()
+            if not k.startswith("_") and isinstance(v, list)
+        }
     except (OSError, ValueError):
         return {}
 
@@ -236,44 +367,70 @@ def catalog_models(provider: ProviderId) -> list[str]:
 
 
 # -------------------------------------------------------------------------------- Discovery
-def discover_models(config: ProviderConfig, secrets: dict[str, str], *, allow_http_remote: bool = False) -> DiscoveryResult:
+def discover_models(
+    config: ProviderConfig, secrets: dict[str, str], *, allow_http_remote: bool = False
+) -> DiscoveryResult:
     """List models available to the configured account, falling back to the suggestion catalog."""
     try:
-        models = _discover(config, secrets, allow_http_remote=allow_http_remote)
+        models = _discover(
+            config, secrets, allow_http_remote=allow_http_remote)
         if models:
             return DiscoveryResult(models=sorted(set(models)), source="discovered")
-        return DiscoveryResult(models=catalog_models(config.provider), source="catalog", error="Discovery returned no models.")
+        return DiscoveryResult(
+            models=catalog_models(config.provider),
+            source="catalog",
+            error="Discovery returned no models.",
+        )
     except NotImplementedError:
         return DiscoveryResult(models=catalog_models(config.provider), source="catalog")
     except Exception as exc:  # noqa: BLE001 - shown to the user, sanitized
-        logger.info("Model discovery failed for %s: %s", config.provider.value, sanitize_error(exc))
-        return DiscoveryResult(models=catalog_models(config.provider), source="catalog", error=sanitize_error(exc))
+        logger.info(
+            "Model discovery failed for %s: %s",
+            config.provider.value,
+            sanitize_error(exc),
+        )
+        return DiscoveryResult(
+            models=catalog_models(config.provider),
+            source="catalog",
+            error=sanitize_error(exc),
+        )
 
 
-def _get_json(url: str, headers: dict[str, str] | None = None, params: dict[str, str] | None = None) -> dict:
+def _get_json(
+    url: str,
+    headers: dict[str, str] | None = None,
+    params: dict[str, str] | None = None,
+) -> dict:
     with httpx.Client(timeout=DISCOVERY_TIMEOUT, follow_redirects=False) as client:
         response = client.get(url, headers=headers or {}, params=params)
         if response.status_code in (401, 403):
-            raise PermissionError(f"Authentication failed (HTTP {response.status_code}). Check the API key.")
+            raise PermissionError(
+                f"Authentication failed (HTTP {response.status_code}). Check the API key."
+            )
         response.raise_for_status()
         return response.json()
 
 
-def _discover(config: ProviderConfig, secrets: dict[str, str], *, allow_http_remote: bool) -> list[str]:
+def _discover(
+    config: ProviderConfig, secrets: dict[str, str], *, allow_http_remote: bool
+) -> list[str]:
     s = config.settings
     p = config.provider
     if p == ProviderId.OPENAI:
         key = secrets.get("api_key")
         if not key:
-            raise PermissionError("An API key is required for model discovery.")
+            raise PermissionError(
+                "An API key is required for model discovery.")
         base = (s.get("base_url") or "https://api.openai.com/v1").rstrip("/")
         validate_url(base, allow_http_remote=allow_http_remote)
-        data = _get_json(f"{base}/models", headers={"Authorization": f"Bearer {key}"})
+        data = _get_json(f"{base}/models",
+                         headers={"Authorization": f"Bearer {key}"})
         return [m["id"] for m in data.get("data", []) if "id" in m]
     if p == ProviderId.ANTHROPIC:
         key = secrets.get("api_key")
         if not key:
-            raise PermissionError("An API key is required for model discovery.")
+            raise PermissionError(
+                "An API key is required for model discovery.")
         data = _get_json(
             "https://api.anthropic.com/v1/models",
             headers={"x-api-key": key, "anthropic-version": "2023-06-01"},
@@ -283,7 +440,8 @@ def _discover(config: ProviderConfig, secrets: dict[str, str], *, allow_http_rem
     if p == ProviderId.GEMINI:
         key = secrets.get("api_key")
         if not key:
-            raise PermissionError("An API key is required for model discovery.")
+            raise PermissionError(
+                "An API key is required for model discovery.")
         data = _get_json(
             "https://generativelanguage.googleapis.com/v1beta/models",
             headers={"x-goog-api-key": key},
@@ -297,15 +455,29 @@ def _discover(config: ProviderConfig, secrets: dict[str, str], *, allow_http_rem
     if p == ProviderId.MISTRAL:
         key = secrets.get("api_key")
         if not key:
-            raise PermissionError("An API key is required for model discovery.")
-        data = _get_json("https://api.mistral.ai/v1/models", headers={"Authorization": f"Bearer {key}"})
-        return [m["id"] for m in data.get("data", []) if m.get("capabilities", {}).get("completion_chat", True)]
+            raise PermissionError(
+                "An API key is required for model discovery.")
+        data = _get_json(
+            "https://api.mistral.ai/v1/models",
+            headers={"Authorization": f"Bearer {key}"},
+        )
+        return [
+            m["id"]
+            for m in data.get("data", [])
+            if m.get("capabilities", {}).get("completion_chat", True)
+        ]
     if p == ProviderId.OLLAMA:
-        host = validate_url(s.get("host") or "http://localhost:11434", allow_http_remote=allow_http_remote).rstrip("/")
+        host = validate_url(
+            s.get("host") or "http://localhost:11434",
+            allow_http_remote=allow_http_remote,
+        ).rstrip("/")
         data = _get_json(f"{host}/api/tags")
         return [m["name"] for m in data.get("models", []) if "name" in m]
     if p == ProviderId.LLAMACPP:
-        base = validate_url(s.get("base_url") or "http://localhost:8080", allow_http_remote=allow_http_remote).rstrip("/")
+        base = validate_url(
+            s.get("base_url") or "http://localhost:8080",
+            allow_http_remote=allow_http_remote,
+        ).rstrip("/")
         data = _get_json(f"{base}/v1/models")
         return [m["id"] for m in data.get("data", []) if "id" in m]
     if p == ProviderId.BEDROCK:
@@ -314,15 +486,24 @@ def _discover(config: ProviderConfig, secrets: dict[str, str], *, allow_http_rem
         session = build_boto_session(config, secrets)
         if session is None:
             raise NotImplementedError  # Bedrock API key mode: no control-plane access
-        client = session.client("bedrock", region_name=s.get("region") or "us-east-1")
+        client = session.client(
+            "bedrock", region_name=s.get("region") or "us-east-1")
         ids = [
             m["modelId"]
-            for m in client.list_foundation_models(byOutputModality="TEXT").get("modelSummaries", [])
+            for m in client.list_foundation_models(byOutputModality="TEXT").get(
+                "modelSummaries", []
+            )
             if "ON_DEMAND" in m.get("inferenceTypesSupported", [])
         ]
         try:
-            profiles = client.list_inference_profiles(maxResults=1000).get("inferenceProfileSummaries", [])
-            ids.extend(p_["inferenceProfileId"] for p_ in profiles if p_.get("status", "ACTIVE") == "ACTIVE")
+            profiles = client.list_inference_profiles(maxResults=1000).get(
+                "inferenceProfileSummaries", []
+            )
+            ids.extend(
+                p_["inferenceProfileId"]
+                for p_ in profiles
+                if p_.get("status", "ACTIVE") == "ACTIVE"
+            )
         except Exception:  # noqa: BLE001 - older accounts/regions may not support profiles
             pass
         return ids

@@ -13,15 +13,14 @@ concatenated text of a paragraph and maps offsets back to the individual ``w:t``
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable
 
+from document_engine.formatting_preserver import in_fallback, own_text_nodes
 from docx.document import Document as DocxDocument
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from docx.oxml.ns import qn
 from lxml import etree
-
-from document_engine.formatting_preserver import in_fallback, own_text_nodes
 
 PLACEHOLDER_RE = re.compile(r"\{\{\s*([A-Za-z_][A-Za-z0-9_.\-]{0,63})\s*\}\}")
 XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
@@ -72,7 +71,9 @@ def _location(p: etree._Element, kind: str) -> str:
     return "body"
 
 
-def _paragraph_runs_text(p: etree._Element) -> tuple[str, list[tuple[etree._Element, int, int]]]:
+def _paragraph_runs_text(
+    p: etree._Element,
+) -> tuple[str, list[tuple[etree._Element, int, int]]]:
     nodes = own_text_nodes(p)
     spans, pos, chunks = [], 0, []
     for t in nodes:
@@ -93,8 +94,13 @@ def find_placeholders(doc: DocxDocument) -> list[PlaceholderHit]:
             if "{{" not in text:
                 continue
             for m in PLACEHOLDER_RE.finditer(text):
-                split = not any(start <= m.start() and m.end() <= end for _, start, end in spans)
-                hits.append(PlaceholderHit(m.group(1), m.group(0), _location(p, kind), split))
+                split = not any(
+                    start <= m.start() and m.end() <= end for _, start, end in spans
+                )
+                hits.append(
+                    PlaceholderHit(m.group(1), m.group(
+                        0), _location(p, kind), split)
+                )
     return hits
 
 
@@ -128,7 +134,8 @@ def replace_in_paragraph(p: etree._Element, values: dict[str, str]) -> list[str]
     text, spans = _paragraph_runs_text(p)
     if "{{" not in text:
         return []
-    matches = [m for m in PLACEHOLDER_RE.finditer(text) if m.group(1) in values]
+    matches = [m for m in PLACEHOLDER_RE.finditer(
+        text) if m.group(1) in values]
     replaced: list[str] = []
     for m in reversed(matches):  # right to left keeps earlier offsets valid
         start, end, key = m.start(), m.end(), m.group(1)
@@ -138,7 +145,7 @@ def replace_in_paragraph(p: etree._Element, values: dict[str, str]) -> list[str]
         t_first, s_first, _ = spans[first]
         t_last, s_last, _ = spans[last]
         before = (t_first.text or "")[: start - s_first]
-        after = (t_last.text or "")[end - s_last :]
+        after = (t_last.text or "")[end - s_last:]
         if first == last:
             _write_value(t_first, before, value, after)
         else:
@@ -157,11 +164,15 @@ def _drop_empty_runs(p: etree._Element) -> None:
         if next(r.iterancestors(qn("w:p")), None) is not p:
             continue
         children = [c for c in r if c.tag != qn("w:rPr")]
-        if children and all(c.tag == qn("w:t") and not (c.text or "") for c in children):
+        if children and all(
+            c.tag == qn("w:t") and not (c.text or "") for c in children
+        ):
             r.getparent().remove(r)
 
 
-def replace_placeholders(doc: DocxDocument, values: dict[str, str], parts: Iterable[str] | None = None) -> ReplaceResult:
+def replace_placeholders(
+    doc: DocxDocument, values: dict[str, str], parts: Iterable[str] | None = None
+) -> ReplaceResult:
     """Replace placeholders in the body, tables, text boxes, headers and footers."""
     result = ReplaceResult()
     wanted = set(parts) if parts is not None else None

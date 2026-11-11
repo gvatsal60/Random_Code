@@ -10,9 +10,11 @@ from services.mcp_tool_discovery import SafeMCPAgentTool
 class MCPToolRegistry:
     """Combines live tool objects with the persisted per-tool enable flags."""
 
-    def __init__(self, connections: MCPConnectionManager, config_lookup) -> None:  # noqa: ANN001
+    def __init__(self, connections: MCPConnectionManager, config_lookup) -> None:
         self._connections = connections
-        self._config_lookup = config_lookup  # callable(server_id) -> MCPServerConfig | None
+        self._config_lookup = (
+            config_lookup  # callable(server_id) -> MCPServerConfig | None
+        )
 
     def tool_infos(self, server_id: str | None = None) -> list[MCPToolInfo]:
         infos: list[MCPToolInfo] = []
@@ -43,7 +45,9 @@ class MCPToolRegistry:
         return result
 
     @staticmethod
-    def set_enabled(cfg: MCPServerConfig, original_names: list[str], enabled: bool) -> MCPServerConfig:
+    def set_enabled(
+        cfg: MCPServerConfig, original_names: list[str], enabled: bool
+    ) -> MCPServerConfig:
         states = dict(cfg.tool_states)
         for name in original_names:
             states[name] = enabled

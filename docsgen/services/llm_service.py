@@ -11,10 +11,12 @@ import concurrent.futures
 import logging
 import threading
 import time
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any
 
-from models.provider_models import ConnectionStatus, DiscoveryResult, ProviderConfig, ProviderId
+from models.provider_models import (ConnectionStatus, DiscoveryResult,
+                                    ProviderConfig, ProviderId)
 from services import model_registry, provider_factory
 from services.credential_manager import CredentialManager
 from services.security import sanitize_error
@@ -44,7 +46,9 @@ class LLMService:
         self._credentials = credentials
         self._allow_http_remote = allow_http_remote
         self._factory: ModelFactory = model_factory or (
-            lambda cfg, secrets: provider_factory.create_model(cfg, secrets, allow_http_remote=self._allow_http_remote())
+            lambda cfg, secrets: provider_factory.create_model(
+                cfg, secrets, allow_http_remote=self._allow_http_remote()
+            )
         )
         self._lock = threading.Lock()
         self._active: ProviderConfig | None = None
@@ -61,7 +65,8 @@ class LLMService:
                 self._active = ProviderConfig(**active)
                 self.revision = 1
             except ValueError:
-                logger.warning("Saved LLM configuration is invalid and was ignored.")
+                logger.warning(
+                    "Saved LLM configuration is invalid and was ignored.")
 
     def saved_configs(self) -> dict[str, ProviderConfig]:
         llm = self._store.get("llm", {}) or {}
@@ -94,16 +99,25 @@ class LLMService:
     def apply(self, config: ProviderConfig) -> None:
         """Make ``config`` the configuration used by all subsequent agent runs."""
         secrets = self._secrets_for(config)
-        problems = provider_factory.validate_config(config, secrets, allow_http_remote=self._allow_http_remote())
+        problems = provider_factory.validate_config(
+            config, secrets, allow_http_remote=self._allow_http_remote()
+        )
         if problems:
             raise provider_factory.ProviderConfigError(" ".join(problems))
         with self._lock:
-            changed = self._active is None or self._active.model_dump() != config.model_dump()
+            changed = (
+                self._active is None or self._active.model_dump() != config.model_dump()
+            )
             self._active = config
             self.revision += 1
             if changed:
                 self.status = ConnectionStatus()
-        logger.info("LLM configuration applied: provider=%s model=%s (revision %d)", config.provider.value, config.model_id, self.revision)
+        logger.info(
+            "LLM configuration applied: provider=%s model=%s (revision %d)",
+            config.provider.value,
+            config.model_id,
+            self.revision,
+        )
 
     def clear_active(self) -> None:
         with self._lock:
@@ -122,23 +136,33 @@ class LLMService:
 
     # ------------------------------------------------------------------ models
     def _secrets_for(self, config: ProviderConfig) -> dict[str, str]:
-        return self._credentials.provider_secrets(model_registry.get_spec(config.provider))
+        return self._credentials.provider_secrets(
+            model_registry.get_spec(config.provider)
+        )
 
-    def build_model(self, config: ProviderConfig):  # noqa: ANN201 - Strands Model
+    def build_model(self, config: ProviderConfig):
         return self._factory(config, self._secrets_for(config))
 
-    def get_model(self):  # noqa: ANN201 - Strands Model
+    def get_model(self):
         """Return a fresh model instance for the active configuration."""
         config = self._active
         if config is None:
-            raise LLMNotConfiguredError("No AI provider is configured. Open 'AI Provider Configuration' first.")
+            raise LLMNotConfiguredError(
+                "No AI provider is configured. Open 'AI Provider Configuration' first."
+            )
         return self.build_model(config)
 
     def discover_models(self, config: ProviderConfig) -> DiscoveryResult:
-        return model_registry.discover_models(config, self._secrets_for(config), allow_http_remote=self._allow_http_remote())
+        return model_registry.discover_models(
+            config,
+            self._secrets_for(config),
+            allow_http_remote=self._allow_http_remote(),
+        )
 
     # ------------------------------------------------------------------ connection test
-    def test_connection(self, config: ProviderConfig | None = None, timeout: float = 60.0) -> ConnectionStatus:
+    def test_connection(
+        self, config: ProviderConfig | None = None, timeout: float = 60.0
+    ) -> ConnectionStatus:
         """Validate, initialize the model through Strands, send a tiny request and verify the reply."""
         from strands import Agent
 
@@ -149,15 +173,26 @@ class LLMService:
 
         def _run() -> str:
             model = self.build_model(config)
-            agent = Agent(model=model, tools=[], callback_handler=None, system_prompt="You are a connectivity check. Answer briefly.")
+            agent = Agent(
+                model=model,
+                tools=[],
+                callback_handler=None,
+                system_prompt="You are a connectivity check. Answer briefly.",
+            )
             result = agent(TEST_PROMPT)
             return str(result).strip()
 
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="llm-test")
+        executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="llm-test"
+        )
         try:
             reply = executor.submit(_run).result(timeout=timeout)
             ok = bool(reply)
-            message = f"Connected. Model replied: {reply[:80]!r}" if ok else "The model returned an empty response."
+            message = (
+                f"Connected. Model replied: {reply[:80]!r}"
+                if ok
+                else "The model returned an empty response."
+            )
         except concurrent.futures.TimeoutError:
             ok, message = False, f"No response within {int(timeout)} seconds."
         except Exception as exc:  # noqa: BLE001 - displayed to the user
@@ -172,6 +207,9 @@ class LLMService:
             latency_ms=int((time.monotonic() - started) * 1000),
             tested_at=datetime.now(),
         )
-        if self._active is not None and config.model_dump() == self._active.model_dump():
+        if (
+            self._active is not None
+            and config.model_dump() == self._active.model_dump()
+        ):
             self.status = status
         return status

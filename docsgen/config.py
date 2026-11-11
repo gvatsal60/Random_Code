@@ -23,7 +23,17 @@ APP_NAME = "DocsGen"
 APP_VERSION = "1.0.0"
 PROJECT_ROOT = Path(__file__).resolve().parent
 
-DEFAULT_STDIO_ALLOWLIST = ["python", "python3", "uv", "uvx", "npx", "node", "docker", "deno", "bunx"]
+DEFAULT_STDIO_ALLOWLIST = [
+    "python",
+    "python3",
+    "uv",
+    "uvx",
+    "npx",
+    "node",
+    "docker",
+    "deno",
+    "bunx",
+]
 
 
 class AppSettings(BaseModel):
@@ -42,7 +52,9 @@ class AppSettings(BaseModel):
     # MCP security
     mcp_startup_timeout: int = Field(default=30, ge=5, le=300)
     mcp_tool_timeout: int = Field(default=60, ge=5, le=900)
-    stdio_command_allowlist: list[str] = Field(default_factory=lambda: list(DEFAULT_STDIO_ALLOWLIST))
+    stdio_command_allowlist: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_STDIO_ALLOWLIST)
+    )
     allow_insecure_http_localhost: bool = True
     allow_insecure_http_remote: bool = False
     new_tools_enabled_by_default: bool = True
@@ -101,7 +113,8 @@ class AppSettings(BaseModel):
 
 
 # Fields that may be changed from the UI (data_dir is fixed per process for safety).
-EDITABLE_SETTINGS = [name for name in AppSettings.model_fields if name != "data_dir"]
+EDITABLE_SETTINGS = [
+    name for name in AppSettings.model_fields if name != "data_dir"]
 
 
 def _from_streamlit_secrets() -> dict[str, Any]:
@@ -138,7 +151,8 @@ def load_settings(overrides: dict[str, Any] | None = None) -> AppSettings:
     values.update(_from_streamlit_secrets())
     values.update(_from_env())
     if overrides:
-        values.update({k: v for k, v in overrides.items() if k in EDITABLE_SETTINGS})
+        values.update({k: v for k, v in overrides.items()
+                      if k in EDITABLE_SETTINGS})
     settings = AppSettings(**values)
     settings.ensure_dirs()
     return settings
@@ -155,7 +169,10 @@ def setup_logging(level: str = "INFO") -> None:
     root = logging.getLogger()
     if not _LOGGING_CONFIGURED:
         handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s %(levelname)s %(name)s: %(message)s")
+        )
         root.addHandler(handler)
         _LOGGING_CONFIGURED = True
     for handler in root.handlers:
@@ -163,5 +180,19 @@ def setup_logging(level: str = "INFO") -> None:
             handler.addFilter(RedactingFilter())
     root.setLevel(level)
     # Third-party libraries can be chatty and may echo request payloads at DEBUG level.
-    for noisy in ("httpx", "httpx2", "httpcore", "botocore", "urllib3", "openai", "anthropic", "google_genai", "LiteLLM", "mcp", "strands"):
-        logging.getLogger(noisy).setLevel(max(logging.WARNING, logging.getLevelName(level)))
+    for noisy in (
+        "httpx",
+        "httpx2",
+        "httpcore",
+        "botocore",
+        "urllib3",
+        "openai",
+        "anthropic",
+        "google_genai",
+        "LiteLLM",
+        "mcp",
+        "strands",
+    ):
+        logging.getLogger(noisy).setLevel(
+            max(logging.WARNING, logging.getLevelName(level))
+        )

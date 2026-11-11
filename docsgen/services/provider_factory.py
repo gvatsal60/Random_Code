@@ -25,7 +25,9 @@ class ProviderDependencyError(RuntimeError):
     """The SDK needed by the provider is not installed."""
 
 
-def validate_config(config: ProviderConfig, secrets: dict[str, str], *, allow_http_remote: bool = False) -> list[str]:
+def validate_config(
+    config: ProviderConfig, secrets: dict[str, str], *, allow_http_remote: bool = False
+) -> list[str]:
     """Return a list of human-readable validation problems (empty when valid)."""
     spec = get_spec(config.provider)
     problems: list[str] = []
@@ -35,7 +37,11 @@ def validate_config(config: ProviderConfig, secrets: dict[str, str], *, allow_ht
     for field in spec.fields:
         if field.show_if and not _visible(field.show_if, settings):
             continue
-        value = secrets.get(field.key) if field.is_secret else settings.get(field.key, field.default)
+        value = (
+            secrets.get(field.key)
+            if field.is_secret
+            else settings.get(field.key, field.default)
+        )
         if field.required and (value is None or value == ""):
             problems.append(f"{field.label} is required.")
         if field.kind == "url" and value:
@@ -46,12 +52,17 @@ def validate_config(config: ProviderConfig, secrets: dict[str, str], *, allow_ht
     if config.provider == ProviderId.BEDROCK:
         mode = settings.get("auth_mode", "default_chain")
         if mode == "access_keys":
-            if not secrets.get("aws_access_key_id") or not secrets.get("aws_secret_access_key"):
-                problems.append("AWS access key ID and secret access key are required for access-key authentication.")
+            if not secrets.get("aws_access_key_id") or not secrets.get(
+                "aws_secret_access_key"
+            ):
+                problems.append(
+                    "AWS access key ID and secret access key are required for access-key authentication."
+                )
         if mode == "assume_role" and not settings.get("role_arn"):
             problems.append("An IAM role ARN is required to assume a role.")
         if mode == "profile" and not settings.get("profile_name"):
-            problems.append("A profile name is required for profile authentication.")
+            problems.append(
+                "A profile name is required for profile authentication.")
         if mode == "bedrock_api_key" and not secrets.get("bedrock_api_key"):
             problems.append("A Bedrock API key is required.")
     return problems
@@ -77,7 +88,7 @@ def _load_class(config: ProviderConfig) -> type:
     return getattr(module, spec.strands_class)
 
 
-def build_boto_session(config: ProviderConfig, secrets: dict[str, str]):  # noqa: ANN201 - boto3 type
+def build_boto_session(config: ProviderConfig, secrets: dict[str, str]):
     """Build a boto3 session for Bedrock according to the selected authentication mode.
 
     Returns ``None`` for Bedrock API key mode, where no AWS session is used.
@@ -97,7 +108,9 @@ def build_boto_session(config: ProviderConfig, secrets: dict[str, str]):  # noqa
             region_name=region,
         )
     if mode == "profile":
-        return boto3.Session(profile_name=settings.get("profile_name"), region_name=region)
+        return boto3.Session(
+            profile_name=settings.get("profile_name"), region_name=region
+        )
     if mode == "assume_role":
         if secrets.get("aws_access_key_id") and secrets.get("aws_secret_access_key"):
             base = boto3.Session(
@@ -107,10 +120,14 @@ def build_boto_session(config: ProviderConfig, secrets: dict[str, str]):  # noqa
                 region_name=region,
             )
         elif settings.get("profile_name"):
-            base = boto3.Session(profile_name=settings.get("profile_name"), region_name=region)
+            base = boto3.Session(
+                profile_name=settings.get("profile_name"), region_name=region
+            )
         else:
             base = boto3.Session(region_name=region)
-        creds = base.client("sts").assume_role(RoleArn=settings["role_arn"], RoleSessionName="docsgen")["Credentials"]
+        creds = base.client("sts").assume_role(
+            RoleArn=settings["role_arn"], RoleSessionName="docsgen"
+        )["Credentials"]
         from services.security import Redactor
 
         Redactor.register(creds["SecretAccessKey"])
@@ -124,7 +141,9 @@ def build_boto_session(config: ProviderConfig, secrets: dict[str, str]):  # noqa
     return boto3.Session(region_name=region)  # default credential chain
 
 
-def _common_params(config: ProviderConfig, max_tokens_key: str = "max_tokens") -> dict[str, Any]:
+def _common_params(
+    config: ProviderConfig, max_tokens_key: str = "max_tokens"
+) -> dict[str, Any]:
     params: dict[str, Any] = {}
     if config.temperature is not None and config.settings.get("send_temperature", True):
         params["temperature"] = config.temperature
@@ -133,9 +152,12 @@ def _common_params(config: ProviderConfig, max_tokens_key: str = "max_tokens") -
     return params
 
 
-def create_model(config: ProviderConfig, secrets: dict[str, str], *, allow_http_remote: bool = False):  # noqa: ANN201
+def create_model(
+    config: ProviderConfig, secrets: dict[str, str], *, allow_http_remote: bool = False
+):
     """Instantiate the Strands model for ``config``. Raises ProviderConfigError / ProviderDependencyError."""
-    problems = validate_config(config, secrets, allow_http_remote=allow_http_remote)
+    problems = validate_config(
+        config, secrets, allow_http_remote=allow_http_remote)
     if problems:
         raise ProviderConfigError(" ".join(problems))
     cls = _load_class(config)
@@ -164,7 +186,11 @@ def create_model(config: ProviderConfig, secrets: dict[str, str], *, allow_http_
 
     if p == ProviderId.GEMINI:
         params = _common_params(config, "max_output_tokens")
-        return cls(client_args={"api_key": secrets["api_key"]}, model_id=config.model_id, params=params)
+        return cls(
+            client_args={"api_key": secrets["api_key"]},
+            model_id=config.model_id,
+            params=params,
+        )
 
     if p == ProviderId.BEDROCK:
         kwargs: dict[str, Any] = {"model_id": config.model_id}
@@ -194,7 +220,11 @@ def create_model(config: ProviderConfig, secrets: dict[str, str], *, allow_http_
             client_args["api_base"] = s["api_base"]
         if s.get("api_version"):
             client_args["api_version"] = s["api_version"]
-        return cls(client_args=client_args, model_id=config.model_id, params=_common_params(config))
+        return cls(
+            client_args=client_args,
+            model_id=config.model_id,
+            params=_common_params(config),
+        )
 
     if p == ProviderId.MISTRAL:
         kwargs = {"model_id": config.model_id}

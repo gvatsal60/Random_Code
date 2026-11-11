@@ -9,7 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from models.document_models import SourceChunk, SourceDocument, TemplateStructure
+from models.document_models import (SourceChunk, SourceDocument,
+                                    TemplateStructure)
 
 
 @dataclass
@@ -23,7 +24,8 @@ class DocumentContext:
         doc = self.sources.get((doc_id or "").strip())
         if doc is None:
             known = ", ".join(self.sources) or "none"
-            raise KeyError(f"Unknown document id '{doc_id}'. Known ids: {known}")
+            raise KeyError(
+                f"Unknown document id '{doc_id}'. Known ids: {known}")
         return doc
 
     def chunk(self, chunk_id: str) -> SourceChunk | None:
@@ -39,4 +41,7 @@ class DocumentContext:
     def limit(self, text: str) -> str:
         if len(text) <= self.max_result_chars:
             return text
-        return text[: self.max_result_chars] + f"\n…[truncated; {len(text) - self.max_result_chars} more characters]"
+        return (
+            text[: self.max_result_chars]
+            + f"\n…[truncated; {len(text) - self.max_result_chars} more characters]"
+        )

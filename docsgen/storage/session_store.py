@@ -16,12 +16,11 @@ if TYPE_CHECKING:  # pragma: no cover
 
 logger = logging.getLogger(__name__)
 _CONTAINER_KEY = "_docsgen_container"
-_live_containers: "weakref.WeakSet[ServiceContainer]" = weakref.WeakSet()
+_live_containers: weakref.WeakSet[ServiceContainer] = weakref.WeakSet()
 
 
-def get_container() -> "ServiceContainer":
+def get_container() -> ServiceContainer:
     import streamlit as st
-
     from services.container import ServiceContainer
 
     container = st.session_state.get(_CONTAINER_KEY)
@@ -31,7 +30,12 @@ def get_container() -> "ServiceContainer":
         _live_containers.add(container)
         # Disconnect MCP servers and delete uploads when the session is garbage collected.
         # The finalizer must not reference the container itself, only the resources to release.
-        weakref.finalize(container, ServiceContainer.shutdown_resources, container.mcp.connections, container.files)
+        weakref.finalize(
+            container,
+            ServiceContainer.shutdown_resources,
+            container.mcp.connections,
+            container.files,
+        )
     return container
 
 
@@ -48,5 +52,5 @@ def _shutdown_all() -> None:  # pragma: no cover - process exit
     for container in list(_live_containers):
         try:
             container.shutdown()
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.debug("Error during shutdown", exc_info=True)

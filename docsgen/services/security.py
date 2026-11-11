@@ -25,7 +25,9 @@ _SECRET_PATTERNS = [
     re.compile(r"ASIA[0-9A-Z]{16}"),
     re.compile(r"AIza[0-9A-Za-z_\-]{30,}"),  # Google API key
     re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._\-~+/=]{8,}"),
-    re.compile(r"(?i)((?:api[_-]?key|token|secret|password|authorization)[\"']?\s*[:=]\s*[\"']?)[^\s\"',;]{6,}"),
+    re.compile(
+        r"(?i)((?:api[_-]?key|token|secret|password|authorization)[\"']?\s*[:=]\s*[\"']?)[^\s\"',;]{6,}"
+    ),
     re.compile(r"(?i)(aws_secret_access_key\s*[:=]\s*)\S+"),
 ]
 
@@ -68,7 +70,7 @@ class Redactor:
 class RedactingFilter(logging.Filter):
     """Logging filter that redacts secrets from the final message."""
 
-    def filter(self, record: logging.LogRecord) -> bool:  # noqa: A003 - logging API
+    def filter(self, record: logging.LogRecord) -> bool:
         try:
             message = record.getMessage()
         except Exception:  # noqa: BLE001
@@ -79,7 +81,9 @@ class RedactingFilter(logging.Filter):
             record.args = None
         if record.exc_info and record.exc_info[1] is not None:
             # Never let raw exception text with credentials reach the handler.
-            record.exc_text = Redactor.redact(logging.Formatter().formatException(record.exc_info))
+            record.exc_text = Redactor.redact(
+                logging.Formatter().formatException(record.exc_info)
+            )
             record.exc_info = None
         return True
 
@@ -95,7 +99,11 @@ def sanitize_error(exc: BaseException | str, limit: int = 600) -> str:
         while current is not None and id(current) not in seen and len(parts) < 4:
             seen.add(id(current))
             message = str(current).strip()
-            parts.append(f"{type(current).__name__}: {message}" if message else type(current).__name__)
+            parts.append(
+                f"{type(current).__name__}: {message}"
+                if message
+                else type(current).__name__
+            )
             current = current.__cause__ or current.__context__
             if isinstance(current, BaseExceptionGroup):  # anyio task groups
                 current = current.exceptions[0] if current.exceptions else None
@@ -128,7 +136,9 @@ def _is_local_host(host: str) -> bool:
         return False
 
 
-def validate_url(url: str, *, allow_http_localhost: bool = True, allow_http_remote: bool = False) -> str:
+def validate_url(
+    url: str, *, allow_http_localhost: bool = True, allow_http_remote: bool = False
+) -> str:
     """Validate an external URL used for MCP servers or model endpoints."""
     url = (url or "").strip()
     if not url:
@@ -141,18 +151,37 @@ def validate_url(url: str, *, allow_http_localhost: bool = True, allow_http_remo
     if not parsed.hostname:
         raise PolicyError("The URL must include a host name.")
     if parsed.username or parsed.password:
-        raise PolicyError("Do not embed credentials in URLs; use the authentication settings instead.")
+        raise PolicyError(
+            "Do not embed credentials in URLs; use the authentication settings instead."
+        )
     if parsed.scheme == "http":
         local = _is_local_host(parsed.hostname)
         if local and not allow_http_localhost:
-            raise PolicyError("Plain HTTP to localhost is disabled in Application Settings.")
+            raise PolicyError(
+                "Plain HTTP to localhost is disabled in Application Settings."
+            )
         if not local and not allow_http_remote:
-            raise PolicyError("Remote servers must use https:// (plain HTTP is disabled in Application Settings).")
+            raise PolicyError(
+                "Remote servers must use https:// (plain HTTP is disabled in Application Settings)."
+            )
     return url
 
 
 # ------------------------------------------------------------------------------------ Commands
-_SHELL_NAMES = {"sh", "bash", "zsh", "fish", "dash", "ksh", "csh", "tcsh", "cmd", "cmd.exe", "powershell", "pwsh"}
+_SHELL_NAMES = {
+    "sh",
+    "bash",
+    "zsh",
+    "fish",
+    "dash",
+    "ksh",
+    "csh",
+    "tcsh",
+    "cmd",
+    "cmd.exe",
+    "powershell",
+    "pwsh",
+}
 
 
 def validate_stdio_command(command: str, args: list[str], allowlist: list[str]) -> None:
@@ -165,14 +194,16 @@ def validate_stdio_command(command: str, args: list[str], allowlist: list[str]) 
     if not command:
         raise PolicyError("A command is required for stdio servers.")
     if any(ch in command for ch in ";|&$`<>\n\r"):
-        raise PolicyError("The command contains shell metacharacters. Provide the executable and arguments separately.")
+        raise PolicyError(
+            "The command contains shell metacharacters. Provide the executable and arguments separately."
+        )
     executable = Path(command).name
     base = executable.lower()
     for suffix in (".exe", ".cmd", ".bat"):
-        if base.endswith(suffix):
-            base = base[: -len(suffix)]
+        base = base.removesuffix(suffix)
     if base in _SHELL_NAMES:
-        raise PolicyError("Shell interpreters cannot be used as MCP server commands.")
+        raise PolicyError(
+            "Shell interpreters cannot be used as MCP server commands.")
     allowed = {a.lower() for a in allowlist}
     if base not in allowed and executable.lower() not in allowed:
         raise PolicyError(
@@ -182,9 +213,13 @@ def validate_stdio_command(command: str, args: list[str], allowlist: list[str]) 
         if "\x00" in arg:
             raise PolicyError("Arguments must not contain NUL characters.")
     if base in {"python", "python3"} and any(a in {"-c"} for a in args):
-        raise PolicyError("Inline Python code (-c) is not allowed; point to a server script or module instead.")
+        raise PolicyError(
+            "Inline Python code (-c) is not allowed; point to a server script or module instead."
+        )
     if base == "node" and any(a in {"-e", "--eval", "-p", "--print"} for a in args):
-        raise PolicyError("Inline JavaScript evaluation is not allowed; point to a server script instead.")
+        raise PolicyError(
+            "Inline JavaScript evaluation is not allowed; point to a server script instead."
+        )
 
 
 # ---------------------------------------------------------------------------- Untrusted data

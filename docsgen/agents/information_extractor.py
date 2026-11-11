@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from agents.base import GROUNDING_RULES, AgentSpec
-from agents.prompting import compact_json, sources_digest, task_block, template_digest, user_answers_block
-from models.agent_models import AgentRole, ExtractionResult, TaskType, TemplateAnalysis
+from agents.prompting import (compact_json, sources_digest, task_block,
+                              template_digest, user_answers_block)
+from models.agent_models import (AgentRole, ExtractionResult, TaskType,
+                                 TemplateAnalysis)
 from tools.context import DocumentContext
 
 SPEC = AgentSpec(
@@ -30,11 +32,29 @@ Work method:
 )
 
 
-def build_prompt(ctx: DocumentContext, analysis: TemplateAnalysis | None, task: TaskType, instructions: str, answers: dict[str, str], budget: int) -> str:
-    parts = [task_block(task, instructions), "TEMPLATE OUTLINE:", template_digest(ctx, 8_000)]
+def build_prompt(
+    ctx: DocumentContext,
+    analysis: TemplateAnalysis | None,
+    task: TaskType,
+    instructions: str,
+    answers: dict[str, str],
+    budget: int,
+) -> str:
+    parts = [
+        task_block(task, instructions),
+        "TEMPLATE OUTLINE:",
+        template_digest(ctx, 8_000),
+    ]
     if analysis is not None:
-        parts += ["TEMPLATE REQUIREMENTS (from the Document Analyzer):", compact_json(analysis, 12_000)]
+        parts += [
+            "TEMPLATE REQUIREMENTS (from the Document Analyzer):",
+            compact_json(analysis, 12_000),
+        ]
     if answers:
         parts.append(user_answers_block(answers))
-    parts += ["SOURCE DOCUMENTS:", sources_digest(ctx, budget), "Return the ExtractionResult."]
+    parts += [
+        "SOURCE DOCUMENTS:",
+        sources_digest(ctx, budget),
+        "Return the ExtractionResult.",
+    ]
     return "\n\n".join(parts)

@@ -18,17 +18,19 @@ import collections
 import json
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Literal
-
-from pydantic import BaseModel, Field
-from strands.hooks import AfterToolCallEvent, BeforeToolCallEvent, HookProvider, HookRegistry
+from typing import Any, Literal
 
 from models.agent_models import AgentRole
+from pydantic import BaseModel, Field
 from services.security import sanitize_error, wrap_untrusted
 from storage.configuration_store import ConfigurationStore
-from tools import csv_tools, docx_tools, excel_tools, pdf_tools, text_extraction, validation_tools
+from strands.hooks import (AfterToolCallEvent, BeforeToolCallEvent,
+                           HookProvider, HookRegistry)
+from tools import (csv_tools, docx_tools, excel_tools, pdf_tools,
+                   text_extraction, validation_tools)
 from tools.context import DocumentContext
 
 A = AgentRole
@@ -43,30 +45,167 @@ class BuiltinToolDef:
     default_agents: frozenset[AgentRole] = field(default_factory=frozenset)
 
 
-def _d(name: str, category: str, description: str, factory: Callable, *agents: AgentRole) -> BuiltinToolDef:
+def _d(
+    name: str, category: str, description: str, factory: Callable, *agents: AgentRole
+) -> BuiltinToolDef:
     return BuiltinToolDef(name, category, description, factory, frozenset(agents))
 
 
 BUILTIN_TOOLS: list[BuiltinToolDef] = [
-    _d("get_template_outline", "DOCX", "Template section outline and placeholders.", docx_tools.make_get_template_outline, A.DOCUMENT_ANALYZER, A.DOCUMENT_GENERATOR),
-    _d("get_template_section", "DOCX", "Details of one template section.", docx_tools.make_get_template_section, A.DOCUMENT_ANALYZER, A.INFORMATION_EXTRACTOR, A.DOCUMENT_GENERATOR),
-    _d("list_template_placeholders", "DOCX", "Placeholders and their locations.", docx_tools.make_list_template_placeholders, A.DOCUMENT_ANALYZER, A.INFORMATION_EXTRACTOR),
-    _d("get_document_tables", "DOCX", "Tables extracted from Word/PDF sources.", docx_tools.make_get_document_tables, A.INFORMATION_EXTRACTOR, A.DOCUMENT_VALIDATOR),
-    _d("get_pdf_page", "PDF", "Text of one PDF page.", pdf_tools.make_get_pdf_page, A.INFORMATION_EXTRACTOR, A.DOCUMENT_VALIDATOR),
-    _d("get_spreadsheet_sheet", "Excel", "Rows of an Excel sheet or CSV table.", excel_tools.make_get_spreadsheet_sheet, A.INFORMATION_EXTRACTOR, A.DOCUMENT_VALIDATOR),
-    _d("spreadsheet_statistics", "Excel", "Numeric column statistics for sheets.", excel_tools.make_spreadsheet_statistics, A.INFORMATION_EXTRACTOR, A.DOCUMENT_VALIDATOR),
-    _d("get_csv_rows", "CSV", "Rows of a CSV file with optional filtering.", csv_tools.make_get_csv_rows, A.INFORMATION_EXTRACTOR),
-    _d("csv_statistics", "CSV", "Numeric column statistics for CSV files.", csv_tools.make_csv_statistics, A.INFORMATION_EXTRACTOR, A.DOCUMENT_VALIDATOR),
-    _d("list_source_documents", "Text", "List uploaded source documents.", text_extraction.make_list_source_documents, A.INFORMATION_EXTRACTOR, A.RESEARCH_AGENT, A.DOCUMENT_VALIDATOR),
-    _d("read_source_document", "Text", "Read the text of a source document.", text_extraction.make_read_source_document, A.INFORMATION_EXTRACTOR, A.DOCUMENT_VALIDATOR),
-    _d("search_source_documents", "Text", "Keyword search across sources.", text_extraction.make_search_source_documents, A.INFORMATION_EXTRACTOR, A.RESEARCH_AGENT, A.DOCUMENT_GENERATOR, A.DOCUMENT_VALIDATOR),
-    _d("get_source_chunk", "Text", "Full text of a source chunk by id.", text_extraction.make_get_source_chunk, A.INFORMATION_EXTRACTOR, A.RESEARCH_AGENT, A.DOCUMENT_GENERATOR, A.DOCUMENT_VALIDATOR),
-    _d("get_source_entities", "Text", "Dates, amounts, names found by pattern matching.", text_extraction.make_get_source_entities, A.INFORMATION_EXTRACTOR),
-    _d("verify_values_in_sources", "Validation", "Check numbers/dates against sources.", validation_tools.make_verify_values_in_sources, A.DOCUMENT_VALIDATOR, A.QUALITY_REVIEWER),
-    _d("check_remaining_placeholders", "Validation", "Find unfilled placeholders and gap markers.", validation_tools.make_check_placeholders, A.DOCUMENT_VALIDATOR, A.QUALITY_REVIEWER),
-    _d("find_duplicate_content", "Validation", "Find sentences repeated across sections.", validation_tools.make_find_duplicate_content, A.DOCUMENT_VALIDATOR, A.QUALITY_REVIEWER),
-    _d("compare_texts", "Comparison", "Similarity and diff of two texts.", validation_tools.make_compare_texts, A.QUALITY_REVIEWER),
-    _d("readability_stats", "Review", "Readability statistics for a text.", validation_tools.make_readability_stats, A.QUALITY_REVIEWER),
+    _d(
+        "get_template_outline",
+        "DOCX",
+        "Template section outline and placeholders.",
+        docx_tools.make_get_template_outline,
+        A.DOCUMENT_ANALYZER,
+        A.DOCUMENT_GENERATOR,
+    ),
+    _d(
+        "get_template_section",
+        "DOCX",
+        "Details of one template section.",
+        docx_tools.make_get_template_section,
+        A.DOCUMENT_ANALYZER,
+        A.INFORMATION_EXTRACTOR,
+        A.DOCUMENT_GENERATOR,
+    ),
+    _d(
+        "list_template_placeholders",
+        "DOCX",
+        "Placeholders and their locations.",
+        docx_tools.make_list_template_placeholders,
+        A.DOCUMENT_ANALYZER,
+        A.INFORMATION_EXTRACTOR,
+    ),
+    _d(
+        "get_document_tables",
+        "DOCX",
+        "Tables extracted from Word/PDF sources.",
+        docx_tools.make_get_document_tables,
+        A.INFORMATION_EXTRACTOR,
+        A.DOCUMENT_VALIDATOR,
+    ),
+    _d(
+        "get_pdf_page",
+        "PDF",
+        "Text of one PDF page.",
+        pdf_tools.make_get_pdf_page,
+        A.INFORMATION_EXTRACTOR,
+        A.DOCUMENT_VALIDATOR,
+    ),
+    _d(
+        "get_spreadsheet_sheet",
+        "Excel",
+        "Rows of an Excel sheet or CSV table.",
+        excel_tools.make_get_spreadsheet_sheet,
+        A.INFORMATION_EXTRACTOR,
+        A.DOCUMENT_VALIDATOR,
+    ),
+    _d(
+        "spreadsheet_statistics",
+        "Excel",
+        "Numeric column statistics for sheets.",
+        excel_tools.make_spreadsheet_statistics,
+        A.INFORMATION_EXTRACTOR,
+        A.DOCUMENT_VALIDATOR,
+    ),
+    _d(
+        "get_csv_rows",
+        "CSV",
+        "Rows of a CSV file with optional filtering.",
+        csv_tools.make_get_csv_rows,
+        A.INFORMATION_EXTRACTOR,
+    ),
+    _d(
+        "csv_statistics",
+        "CSV",
+        "Numeric column statistics for CSV files.",
+        csv_tools.make_csv_statistics,
+        A.INFORMATION_EXTRACTOR,
+        A.DOCUMENT_VALIDATOR,
+    ),
+    _d(
+        "list_source_documents",
+        "Text",
+        "List uploaded source documents.",
+        text_extraction.make_list_source_documents,
+        A.INFORMATION_EXTRACTOR,
+        A.RESEARCH_AGENT,
+        A.DOCUMENT_VALIDATOR,
+    ),
+    _d(
+        "read_source_document",
+        "Text",
+        "Read the text of a source document.",
+        text_extraction.make_read_source_document,
+        A.INFORMATION_EXTRACTOR,
+        A.DOCUMENT_VALIDATOR,
+    ),
+    _d(
+        "search_source_documents",
+        "Text",
+        "Keyword search across sources.",
+        text_extraction.make_search_source_documents,
+        A.INFORMATION_EXTRACTOR,
+        A.RESEARCH_AGENT,
+        A.DOCUMENT_GENERATOR,
+        A.DOCUMENT_VALIDATOR,
+    ),
+    _d(
+        "get_source_chunk",
+        "Text",
+        "Full text of a source chunk by id.",
+        text_extraction.make_get_source_chunk,
+        A.INFORMATION_EXTRACTOR,
+        A.RESEARCH_AGENT,
+        A.DOCUMENT_GENERATOR,
+        A.DOCUMENT_VALIDATOR,
+    ),
+    _d(
+        "get_source_entities",
+        "Text",
+        "Dates, amounts, names found by pattern matching.",
+        text_extraction.make_get_source_entities,
+        A.INFORMATION_EXTRACTOR,
+    ),
+    _d(
+        "verify_values_in_sources",
+        "Validation",
+        "Check numbers/dates against sources.",
+        validation_tools.make_verify_values_in_sources,
+        A.DOCUMENT_VALIDATOR,
+        A.QUALITY_REVIEWER,
+    ),
+    _d(
+        "check_remaining_placeholders",
+        "Validation",
+        "Find unfilled placeholders and gap markers.",
+        validation_tools.make_check_placeholders,
+        A.DOCUMENT_VALIDATOR,
+        A.QUALITY_REVIEWER,
+    ),
+    _d(
+        "find_duplicate_content",
+        "Validation",
+        "Find sentences repeated across sections.",
+        validation_tools.make_find_duplicate_content,
+        A.DOCUMENT_VALIDATOR,
+        A.QUALITY_REVIEWER,
+    ),
+    _d(
+        "compare_texts",
+        "Comparison",
+        "Similarity and diff of two texts.",
+        validation_tools.make_compare_texts,
+        A.QUALITY_REVIEWER,
+    ),
+    _d(
+        "readability_stats",
+        "Review",
+        "Readability statistics for a text.",
+        validation_tools.make_readability_stats,
+        A.QUALITY_REVIEWER,
+    ),
 ]
 BUILTIN_BY_NAME = {d.name: d for d in BUILTIN_TOOLS}
 
@@ -97,11 +236,13 @@ class ToolExecution(BaseModel):
 
 
 class ToolRegistry:
-    def __init__(self, config_store: ConfigurationStore, mcp_manager) -> None:  # noqa: ANN001
+    def __init__(self, config_store: ConfigurationStore, mcp_manager) -> None:
         self._store = config_store
         self._mcp = mcp_manager
         self._lock = threading.Lock()
-        self.executions: collections.deque[ToolExecution] = collections.deque(maxlen=500)
+        self.executions: collections.deque[ToolExecution] = collections.deque(
+            maxlen=500
+        )
 
     # ------------------------------------------------------------------ built-in state
     def builtin_states(self) -> dict[str, bool]:
@@ -119,7 +260,14 @@ class ToolRegistry:
     def descriptors(self) -> list[ToolDescriptor]:
         states = self.builtin_states()
         result = [
-            ToolDescriptor(name=d.name, source="builtin", category=d.category, description=d.description, enabled=states[d.name], available=True)
+            ToolDescriptor(
+                name=d.name,
+                source="builtin",
+                category=d.category,
+                description=d.description,
+                enabled=states[d.name],
+                available=True,
+            )
             for d in BUILTIN_TOOLS
         ]
         for info in self._mcp.tool_infos():
@@ -130,7 +278,8 @@ class ToolRegistry:
                     source="mcp",
                     category=f"MCP · {info.server_name}",
                     description=info.description,
-                    enabled=bool(info.enabled and cfg is not None and cfg.enabled),
+                    enabled=bool(
+                        info.enabled and cfg is not None and cfg.enabled),
                     available=True,
                     server_id=info.server_id,
                     server_name=info.server_name,
@@ -142,7 +291,15 @@ class ToolRegistry:
             )
         return result
 
-    def filter(self, descriptors: list[ToolDescriptor], *, query: str = "", source: str = "all", server_id: str | None = None, only_enabled: bool = False) -> list[ToolDescriptor]:
+    def filter(
+        self,
+        descriptors: list[ToolDescriptor],
+        *,
+        query: str = "",
+        source: str = "all",
+        server_id: str | None = None,
+        only_enabled: bool = False,
+    ) -> list[ToolDescriptor]:
         q = query.lower().strip()
         out = []
         for d in descriptors:
@@ -175,7 +332,10 @@ class ToolRegistry:
         return perms
 
     def save_permissions(self, perms: dict[AgentRole, set[str]]) -> None:
-        self._store.update("agent_permissions", {role.value: sorted(names) for role, names in perms.items()})
+        self._store.update(
+            "agent_permissions",
+            {role.value: sorted(names) for role, names in perms.items()},
+        )
 
     def set_permission(self, role: AgentRole, tool_name: str, allowed: bool) -> None:
         perms = self.permissions()
@@ -189,7 +349,9 @@ class ToolRegistry:
         return tool_name in self.permissions().get(role, set())
 
     # ------------------------------------------------------------------ agent tools
-    def tools_for_agent(self, role: AgentRole, ctx: DocumentContext) -> tuple[list[Any], list[ToolDescriptor]]:
+    def tools_for_agent(
+        self, role: AgentRole, ctx: DocumentContext
+    ) -> tuple[list[Any], list[ToolDescriptor]]:
         """Return (Strands tool objects, descriptors) the agent may use right now."""
         allowed = self.permissions().get(role, set())
         states = self.builtin_states()
@@ -198,7 +360,16 @@ class ToolRegistry:
         for d in BUILTIN_TOOLS:
             if d.name in allowed and states.get(d.name, True):
                 tools.append(d.factory(ctx))
-                descriptors.append(ToolDescriptor(name=d.name, source="builtin", category=d.category, description=d.description, enabled=True, available=True))
+                descriptors.append(
+                    ToolDescriptor(
+                        name=d.name,
+                        source="builtin",
+                        category=d.category,
+                        description=d.description,
+                        enabled=True,
+                        available=True,
+                    )
+                )
         for name, (tool_obj, info) in self._mcp.available_tools().items():
             if name in allowed:
                 tools.append(tool_obj)
@@ -226,15 +397,24 @@ class ToolRegistry:
         approved_tools: set[str],
         extra_allowed: set[str] | None = None,
         max_result_chars: int = 12_000,
-    ) -> "ToolGuardHook":
-        return ToolGuardHook(self, role, {d.name: d for d in descriptors}, approved_tools, extra_allowed or set(), max_result_chars)
+    ) -> ToolGuardHook:
+        return ToolGuardHook(
+            self,
+            role,
+            {d.name: d for d in descriptors},
+            approved_tools,
+            extra_allowed or set(),
+            max_result_chars,
+        )
 
     def record(self, execution: ToolExecution) -> None:
         with self._lock:
             self.executions.appendleft(execution)
 
     # ------------------------------------------------------------------ direct execution
-    def execute_builtin(self, name: str, arguments: dict[str, Any], ctx: DocumentContext) -> str:
+    def execute_builtin(
+        self, name: str, arguments: dict[str, Any], ctx: DocumentContext
+    ) -> str:
         definition = BUILTIN_BY_NAME.get(name)
         if definition is None:
             raise KeyError(f"Unknown built-in tool: {name}")
@@ -242,10 +422,26 @@ class ToolRegistry:
         started = time.monotonic()
         try:
             output = tool_obj(**arguments)
-            self.record(ToolExecution(agent="user (test)", tool=name, source="builtin", status="success", duration_ms=int((time.monotonic() - started) * 1000)))
+            self.record(
+                ToolExecution(
+                    agent="user (test)",
+                    tool=name,
+                    source="builtin",
+                    status="success",
+                    duration_ms=int((time.monotonic() - started) * 1000),
+                )
+            )
             return str(output)
-        except Exception as exc:  # noqa: BLE001
-            self.record(ToolExecution(agent="user (test)", tool=name, source="builtin", status="error", detail=sanitize_error(exc)))
+        except Exception as exc:
+            self.record(
+                ToolExecution(
+                    agent="user (test)",
+                    tool=name,
+                    source="builtin",
+                    status="error",
+                    detail=sanitize_error(exc),
+                )
+            )
             raise
 
 
@@ -266,11 +462,13 @@ class ToolGuardHook(HookProvider):
         self.role = role
         self.allowed = allowed
         self.approved = approved
-        self.extra_allowed = extra_allowed  # e.g. the structured-output tool registered by Strands
+        self.extra_allowed = (
+            extra_allowed  # e.g. the structured-output tool registered by Strands
+        )
         self.calls: list[str] = []
         self._started: dict[str, float] = {}
 
-    def register_hooks(self, registry: HookRegistry, **kwargs: Any) -> None:  # noqa: ARG002
+    def register_hooks(self, registry: HookRegistry, **kwargs: Any) -> None:
         registry.add_callback(BeforeToolCallEvent, self.before)
         registry.add_callback(AfterToolCallEvent, self.after)
 
@@ -281,14 +479,30 @@ class ToolGuardHook(HookProvider):
         descriptor = self.allowed.get(name)
         if descriptor is None:
             event.cancel_tool = f"Tool '{name}' is not authorized for this agent."
-            self.registry.record(ToolExecution(agent=self.role.value, tool=name, source="unknown", status="blocked", detail="not authorized"))
+            self.registry.record(
+                ToolExecution(
+                    agent=self.role.value,
+                    tool=name,
+                    source="unknown",
+                    status="blocked",
+                    detail="not authorized",
+                )
+            )
             return
         if descriptor.requires_approval and name not in self.approved:
             event.cancel_tool = (
                 f"Tool '{name}' requires explicit user approval before it can run "
                 f"({descriptor.approval_reason or 'consequential operation'}). Continue without it."
             )
-            self.registry.record(ToolExecution(agent=self.role.value, tool=name, source=descriptor.source, status="blocked", detail="approval required"))
+            self.registry.record(
+                ToolExecution(
+                    agent=self.role.value,
+                    tool=name,
+                    source=descriptor.source,
+                    status="blocked",
+                    detail="approval required",
+                )
+            )
             return
         self._started[event.tool_use.get("toolUseId", name)] = time.monotonic()
 
@@ -304,10 +518,18 @@ class ToolGuardHook(HookProvider):
         status = "success" if result.get("status") == "success" else "error"
         detail = ""
         if status == "error":
-            texts = [c.get("text", "") for c in result.get("content", []) if isinstance(c, dict)]
+            texts = [
+                c.get("text", "")
+                for c in result.get("content", [])
+                if isinstance(c, dict)
+            ]
             detail = sanitize_error(" ".join(texts) or "tool error", 300)
         descriptor = self.allowed.get(name)
-        if descriptor is not None and descriptor.source == "mcp" and isinstance(event.result, dict):
+        if (
+            descriptor is not None
+            and descriptor.source == "mcp"
+            and isinstance(event.result, dict)
+        ):
             event.result = self._sanitize_mcp_result(name, event.result)
         self.calls.append(name)
         self.registry.record(
@@ -337,16 +559,23 @@ class ToolGuardHook(HookProvider):
                 parts.append(str(block.get("text", "")))
             elif "json" in block:
                 try:
-                    parts.append(json.dumps(block["json"], ensure_ascii=False, default=str))
+                    parts.append(
+                        json.dumps(block["json"],
+                                   ensure_ascii=False, default=str)
+                    )
                 except (TypeError, ValueError):
                     dropped += 1
             else:
                 dropped += 1
         text = "\n".join(parts)
         if len(text) > self.max_result_chars:
-            text = text[: self.max_result_chars] + f"\n…[truncated; {len(text) - self.max_result_chars} more characters]"
+            text = (
+                text[: self.max_result_chars]
+                + f"\n…[truncated; {len(text) - self.max_result_chars} more characters]"
+            )
         if dropped:
             text += f"\n[{dropped} non-text content block(s) omitted]"
         sanitized = dict(result)
-        sanitized["content"] = [{"text": wrap_untrusted(f"MCP tool {name}", text)}]
+        sanitized["content"] = [
+            {"text": wrap_untrusted(f"MCP tool {name}", text)}]
         return sanitized

@@ -15,15 +15,16 @@ import sys
 import zlib
 from pathlib import Path
 
+import docx
+from docx.enum.section import WD_ORIENT, WD_SECTION
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.shared import Inches, Pt, RGBColor
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import docx  # noqa: E402
-from docx.enum.section import WD_ORIENT, WD_SECTION  # noqa: E402
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK  # noqa: E402
-from docx.oxml import OxmlElement  # noqa: E402
-from docx.oxml.ns import qn  # noqa: E402
-from docx.shared import Inches, Pt, RGBColor  # noqa: E402
 
 OUT = ROOT / "sample_data"
 
@@ -35,23 +36,45 @@ def make_png(width: int = 240, height: int = 64) -> bytes:
         row = bytearray([0])
         for x in range(width):
             if x < height:  # square emblem
-                row += bytes((254, 200, 4)) if (x - 32) ** 2 + (y - 32) ** 2 < 26**2 else bytes((1, 48, 92))
+                row += (
+                    bytes((254, 200, 4))
+                    if (x - 32) ** 2 + (y - 32) ** 2 < 26**2
+                    else bytes((1, 48, 92))
+                )
             else:
                 band = (x // 12) % 2
-                row += bytes((1, 48, 92)) if band or y < 8 or y > height - 8 else bytes((20, 80, 140))
+                row += (
+                    bytes((1, 48, 92))
+                    if band or y < 8 or y > height - 8
+                    else bytes((20, 80, 140))
+                )
         rows.append(bytes(row))
     raw = b"".join(rows)
 
     def chunk(tag: bytes, data: bytes) -> bytes:
-        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+        return (
+            struct.pack(">I", len(data))
+            + tag
+            + data
+            + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+        )
 
-    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b"")
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(raw, 9))
+        + chunk(b"IEND", b"")
+    )
 
 
-def add_hyperlink(paragraph, url: str, parts: list[str]) -> None:  # noqa: ANN001
+def add_hyperlink(paragraph, url: str, parts: list[str]) -> None:
     """Add a hyperlink whose text is split across several runs (as Word often stores it)."""
     part = paragraph.part
-    r_id = part.relate_to(url, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink", is_external=True)
+    r_id = part.relate_to(
+        url,
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        is_external=True,
+    )
     link = OxmlElement("w:hyperlink")
     link.set(qn("r:id"), r_id)
     for text in parts:
@@ -70,10 +93,10 @@ def add_hyperlink(paragraph, url: str, parts: list[str]) -> None:  # noqa: ANN00
         t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
         run.append(t)
         link.append(run)
-    paragraph._p.append(link)  # noqa: SLF001
+    paragraph._p.append(link)
 
 
-def add_page_field(paragraph) -> None:  # noqa: ANN001
+def add_page_field(paragraph) -> None:
     fld = OxmlElement("w:fldSimple")
     fld.set(qn("w:instr"), "PAGE")
     run = OxmlElement("w:r")
@@ -81,10 +104,10 @@ def add_page_field(paragraph) -> None:  # noqa: ANN001
     t.text = "1"
     run.append(t)
     fld.append(run)
-    paragraph._p.append(fld)  # noqa: SLF001
+    paragraph._p.append(fld)
 
 
-def instruction(doc, text: str) -> None:  # noqa: ANN001
+def instruction(doc, text: str) -> None:
     p = doc.add_paragraph()
     run = p.add_run(text)
     run.italic = True
@@ -96,7 +119,10 @@ def build_template(path: Path) -> None:
     normal = doc.styles["Normal"]
     normal.font.name = "Calibri"
     normal.font.size = Pt(11)
-    for level, color in ((1, RGBColor(0x01, 0x30, 0x5C)), (2, RGBColor(0x2E, 0x75, 0xB6))):
+    for level, color in (
+        (1, RGBColor(0x01, 0x30, 0x5C)),
+        (2, RGBColor(0x2E, 0x75, 0xB6)),
+    ):
         style = doc.styles[f"Heading {level}"]
         style.font.name = "Georgia"
         style.font.color.rgb = color
@@ -120,7 +146,9 @@ def build_template(path: Path) -> None:
     doc.add_paragraph("{{project_name}}", style="Title")
     p = doc.add_paragraph()
     p.add_run("Project proposal for ")
-    p.add_run("{{cli").bold = True  # placeholder split across runs with different formatting
+    p.add_run(
+        "{{cli"
+    ).bold = True  # placeholder split across runs with different formatting
     p.add_run("ent_name}}").bold = True
     fancy = doc.add_paragraph()
     run = fancy.add_run("Date: {{date}}")
@@ -129,22 +157,37 @@ def build_template(path: Path) -> None:
 
     table = doc.add_table(rows=3, cols=2)
     table.style = doc.styles["Light Grid Accent 1"]
-    for row, (label, value) in zip(table.rows, [("Prepared by", "{{prepared_by}}"), ("Total budget", "{{budget}}"), ("Reference", "{{reference_number}}")]):
+    for row, (label, value) in zip(
+        table.rows,
+        [
+            ("Prepared by", "{{prepared_by}}"),
+            ("Total budget", "{{budget}}"),
+            ("Reference", "{{reference_number}}"),
+        ],
+    ):
         row.cells[0].text = label
         row.cells[1].text = value
     doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
 
     doc.add_heading("1. Executive Summary", level=1)
-    instruction(doc, "[Insert a concise executive summary of the proposal: the problem, the solution, cost and timeline.]")
+    instruction(
+        doc,
+        "[Insert a concise executive summary of the proposal: the problem, the solution, cost and timeline.]",
+    )
 
     doc.add_heading("2. Introduction", level=1)
     p = doc.add_paragraph("More information is available on the ")
-    add_hyperlink(p, "https://example.com/about", ["{{company", "_name}} website"])
+    add_hyperlink(p, "https://example.com/about",
+                  ["{{company", "_name}} website"])
     p.add_run(".")
-    instruction(doc, "Describe the purpose of this document and the organizations involved.")
+    instruction(
+        doc, "Describe the purpose of this document and the organizations involved."
+    )
 
     doc.add_heading("3. Project Background", level=1)
-    doc.add_paragraph("This proposal builds on the discovery workshops held earlier this year.")
+    doc.add_paragraph(
+        "This proposal builds on the discovery workshops held earlier this year."
+    )
 
     doc.add_heading("4. Objectives", level=1)
     instruction(doc, "List the measurable objectives of the project.")
@@ -154,7 +197,10 @@ def build_template(path: Path) -> None:
     doc.add_paragraph("{{scope_of_work}}")
 
     doc.add_heading("6. Technical Approach", level=1)
-    instruction(doc, "This section should explain the architecture, technologies and methods used.")
+    instruction(
+        doc,
+        "This section should explain the architecture, technologies and methods used.",
+    )
 
     doc.add_heading("7. Implementation Plan", level=1)
     doc.add_paragraph("Phases are delivered in the following order:")
@@ -165,9 +211,14 @@ def build_template(path: Path) -> None:
     # Landscape section for the budget
     landscape = doc.add_section(WD_SECTION.NEW_PAGE)
     landscape.orientation = WD_ORIENT.LANDSCAPE
-    landscape.page_width, landscape.page_height = landscape.page_height, landscape.page_width
+    landscape.page_width, landscape.page_height = (
+        landscape.page_height,
+        landscape.page_width,
+    )
     doc.add_heading("8. Budget", level=1)
-    instruction(doc, "Summarize the budget by work package. The total must match {{budget}}.")
+    instruction(
+        doc, "Summarize the budget by work package. The total must match {{budget}}."
+    )
     budget = doc.add_table(rows=2, cols=3)
     budget.style = doc.styles["Table Grid"]
     for cell, text in zip(budget.rows[0].cells, ["Work package", "Cost", "Notes"]):
@@ -175,7 +226,10 @@ def build_template(path: Path) -> None:
         cell.paragraphs[0].runs[0].bold = True
     portrait = doc.add_section(WD_SECTION.NEW_PAGE)
     portrait.orientation = WD_ORIENT.PORTRAIT
-    portrait.page_width, portrait.page_height = portrait.page_height, portrait.page_width
+    portrait.page_width, portrait.page_height = (
+        portrait.page_height,
+        portrait.page_width,
+    )
 
     doc.add_heading("9. Risk Assessment", level=1)
     instruction(doc, "Identify the main risks, their likelihood and mitigation.")
@@ -260,7 +314,11 @@ def build_sources() -> None:
 
     pdf = fitz.open()
     page = pdf.new_page()
-    page.insert_text((72, 72), "Technical Specification — Unified Customer Data Platform", fontsize=14)
+    page.insert_text(
+        (72, 72),
+        "Technical Specification — Unified Customer Data Platform",
+        fontsize=14,
+    )
     body = (
         "1. Data sources: point-of-sale (nightly export), e-commerce platform (REST API), loyalty app (database).\n"
         "2. Availability target: 99.5% monthly for the reporting layer.\n"
@@ -270,12 +328,18 @@ def build_sources() -> None:
     page.insert_textbox(fitz.Rect(72, 100, 540, 400), body, fontsize=11)
     page2 = pdf.new_page()
     page2.insert_text((72, 72), "Appendix: Service levels", fontsize=12)
-    page2.insert_textbox(fitz.Rect(72, 100, 540, 300), "Incident response within 4 business hours.\nSupport contract: 12 months after go-live.", fontsize=11)
+    page2.insert_textbox(
+        fitz.Rect(72, 100, 540, 300),
+        "Incident response within 4 business hours.\nSupport contract: 12 months after go-live.",
+        fontsize=11,
+    )
     pdf.save(OUT / "sample_specification.pdf")
 
     profile = docx.Document()
     profile.add_heading("Northwind Analytics Ltd. — Company Profile", level=1)
-    profile.add_paragraph("Founded in 2014 in Manchester, Northwind Analytics has 85 employees and specializes in data platforms for retail and logistics.")
+    profile.add_paragraph(
+        "Founded in 2014 in Manchester, Northwind Analytics has 85 employees and specializes in data platforms for retail and logistics."
+    )
     profile.add_paragraph("Contact: delivery@northwind.example")
     profile.save(OUT / "sample_company_profile.docx")
 

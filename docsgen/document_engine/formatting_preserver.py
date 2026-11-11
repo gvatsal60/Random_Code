@@ -13,13 +13,12 @@ import copy
 import hashlib
 import re
 import zipfile
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterator
 
 from docx.oxml.ns import qn
 from lxml import etree
-
 from models.document_models import FormatCheck
 
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -120,7 +119,9 @@ def is_structural(p: etree._Element) -> bool:
 _RUN_PROPS_TO_DROP = ("w:highlight", "w:vanish", "w:shd")
 
 
-def clean_paragraph_properties(ppr: etree._Element | None, keep_numbering: bool = False) -> etree._Element | None:
+def clean_paragraph_properties(
+    ppr: etree._Element | None, keep_numbering: bool = False
+) -> etree._Element | None:
     if ppr is None:
         return None
     ppr = copy.deepcopy(ppr)
@@ -135,7 +136,9 @@ def clean_paragraph_properties(ppr: etree._Element | None, keep_numbering: bool 
     return ppr
 
 
-def reference_run_properties(p: etree._Element | None, strip_instruction_styling: bool = False) -> etree._Element | None:
+def reference_run_properties(
+    p: etree._Element | None, strip_instruction_styling: bool = False
+) -> etree._Element | None:
     """Run properties (font, size, color, ...) of the first text run of a reference paragraph."""
     if p is None:
         return None
@@ -165,7 +168,14 @@ def new_paragraph(ppr: etree._Element | None) -> etree._Element:
     return p
 
 
-def add_text_run(p: etree._Element, text: str, rpr: etree._Element | None, *, bold: bool = False, italic: bool = False) -> None:
+def add_text_run(
+    p: etree._Element,
+    text: str,
+    rpr: etree._Element | None,
+    *,
+    bold: bool = False,
+    italic: bool = False,
+) -> None:
     """Append runs for ``text`` (newlines become line breaks) with the given run properties."""
     run = etree.SubElement(p, qn("w:r"))
     props = copy.deepcopy(rpr) if rpr is not None else None
@@ -188,10 +198,47 @@ def add_text_run(p: etree._Element, text: str, rpr: etree._Element | None, *, bo
 
 
 # Order of rPr children required by the schema (subset sufficient for b/i insertion).
-_RPR_ORDER = ["rStyle", "rFonts", "b", "bCs", "i", "iCs", "caps", "smallCaps", "strike", "dstrike", "outline", "shadow",
-              "emboss", "imprint", "noProof", "snapToGrid", "vanish", "webHidden", "color", "spacing", "w", "kern",
-              "position", "sz", "szCs", "highlight", "u", "effect", "bdr", "shd", "fitText", "vertAlign", "rtl", "cs",
-              "em", "lang", "eastAsianLayout", "specVanish", "oMath"]
+_RPR_ORDER = [
+    "rStyle",
+    "rFonts",
+    "b",
+    "bCs",
+    "i",
+    "iCs",
+    "caps",
+    "smallCaps",
+    "strike",
+    "dstrike",
+    "outline",
+    "shadow",
+    "emboss",
+    "imprint",
+    "noProof",
+    "snapToGrid",
+    "vanish",
+    "webHidden",
+    "color",
+    "spacing",
+    "w",
+    "kern",
+    "position",
+    "sz",
+    "szCs",
+    "highlight",
+    "u",
+    "effect",
+    "bdr",
+    "shd",
+    "fitText",
+    "vertAlign",
+    "rtl",
+    "cs",
+    "em",
+    "lang",
+    "eastAsianLayout",
+    "specVanish",
+    "oMath",
+]
 
 
 def _insert_rpr_child(rpr: etree._Element, child: etree._Element) -> None:
@@ -235,7 +282,13 @@ def snapshot(path: Path | str) -> FormattingSnapshot:
         for name in zf.namelist():
             if name.startswith("word/media/"):
                 snap.image_hashes.append(_hash(zf.read(name)))
-            elif name in ("word/styles.xml", "word/numbering.xml", "word/theme/theme1.xml", "word/fontTable.xml", "word/settings.xml") or re.match(r"word/(header|footer)\d*\.xml$", name):
+            elif name in (
+                "word/styles.xml",
+                "word/numbering.xml",
+                "word/theme/theme1.xml",
+                "word/fontTable.xml",
+                "word/settings.xml",
+            ) or re.match(r"word/(header|footer)\d*\.xml$", name):
                 data = zf.read(name)
                 snap.part_hashes[name] = _hash(data)
                 if "header" in name or "footer" in name:
@@ -246,13 +299,20 @@ def snapshot(path: Path | str) -> FormattingSnapshot:
         snap.hyperlinks += sum(1 for _ in root.iter(qn("w:hyperlink")))
     snap.section_props = [_canonical(s) for s in body.iter(qn("w:sectPr"))]
     snap.hyperlinks += sum(1 for _ in body.iter(qn("w:hyperlink")))
-    snap.page_breaks = sum(1 for br in body.iter(qn("w:br")) if br.get(qn("w:type")) == "page") + sum(
-        1 for _ in body.iter(qn("w:pageBreakBefore"))
-    )
+    snap.page_breaks = sum(
+        1 for br in body.iter(qn("w:br")) if br.get(qn("w:type")) == "page"
+    ) + sum(1 for _ in body.iter(qn("w:pageBreakBefore")))
     for tbl in body.iter(qn("w:tbl")):
         tblpr = tbl.find("w:tblPr", NS)
         grid = tbl.find("w:tblGrid", NS)
-        snap.tables.append(_hash(((_canonical(tblpr) if tblpr is not None else "") + (_canonical(grid) if grid is not None else "")).encode()))
+        snap.tables.append(
+            _hash(
+                (
+                    (_canonical(tblpr) if tblpr is not None else "")
+                    + (_canonical(grid) if grid is not None else "")
+                ).encode()
+            )
+        )
     for st in body.iter(qn("w:pStyle"), qn("w:rStyle"), qn("w:tblStyle")):
         snap.styles_used.add(st.get(qn("w:val")) or "")
     for rf in body.iter(qn("w:rFonts")):
@@ -264,7 +324,12 @@ def snapshot(path: Path | str) -> FormattingSnapshot:
     return snap
 
 
-def compare_snapshots(before: FormattingSnapshot, after: FormattingSnapshot, *, changed_parts_expected: set[str] | None = None) -> list[FormatCheck]:
+def compare_snapshots(
+    before: FormattingSnapshot,
+    after: FormattingSnapshot,
+    *,
+    changed_parts_expected: set[str] | None = None,
+) -> list[FormatCheck]:
     """Compare two snapshots and describe what was preserved."""
     expected = changed_parts_expected or set()
     checks: list[FormatCheck] = []
@@ -277,42 +342,70 @@ def compare_snapshots(before: FormattingSnapshot, after: FormattingSnapshot, *, 
         "word/settings.xml": "Document settings",
     }
     for part, digest in sorted(before.part_hashes.items()):
-        label = labels.get(part, f"{'Header' if 'header' in part else 'Footer'} part {part.split('/')[-1]}")
+        label = labels.get(
+            part,
+            f"{'Header' if 'header' in part else 'Footer'} part {part.split('/')[-1]}",
+        )
         other = after.part_hashes.get(part)
         if other is None:
-            checks.append(FormatCheck(check=label, status="changed", detail="Part is missing in the generated document."))
+            checks.append(
+                FormatCheck(
+                    check=label,
+                    status="changed",
+                    detail="Part is missing in the generated document.",
+                )
+            )
         elif other == digest:
             checks.append(FormatCheck(check=label, status="preserved"))
         elif part in expected:
-            checks.append(FormatCheck(check=label, status="changed_expected", detail="Updated only where placeholders or list numbering were filled."))
+            checks.append(
+                FormatCheck(
+                    check=label,
+                    status="changed_expected",
+                    detail="Updated only where placeholders or list numbering were filled.",
+                )
+            )
         else:
-            checks.append(FormatCheck(check=label, status="changed", detail="Part content differs."))
+            checks.append(
+                FormatCheck(
+                    check=label, status="changed", detail="Part content differs."
+                )
+            )
 
     checks.append(
         FormatCheck(
             check="Page size, orientation and margins (section properties)",
-            status="preserved" if before.section_props == after.section_props else "changed",
+            status="preserved"
+            if before.section_props == after.section_props
+            else "changed",
             detail=f"{len(before.section_props)} section(s)",
         )
     )
     checks.append(
         FormatCheck(
             check="Section breaks",
-            status="preserved" if len(before.section_props) == len(after.section_props) else "changed",
+            status="preserved"
+            if len(before.section_props) == len(after.section_props)
+            else "changed",
             detail=f"{len(before.section_props)} → {len(after.section_props)}",
         )
     )
     checks.append(
         FormatCheck(
             check="Images and logos",
-            status="preserved" if sorted(before.image_hashes) == sorted(after.image_hashes) and after.drawings >= before.drawings else "changed",
+            status="preserved"
+            if sorted(before.image_hashes) == sorted(after.image_hashes)
+            and after.drawings >= before.drawings
+            else "changed",
             detail=f"{len(before.image_hashes)} image part(s), {before.drawings} → {after.drawings} placement(s)",
         )
     )
     checks.append(
         FormatCheck(
             check="Page breaks",
-            status="preserved" if after.page_breaks >= before.page_breaks else "changed",
+            status="preserved"
+            if after.page_breaks >= before.page_breaks
+            else "changed",
             detail=f"{before.page_breaks} → {after.page_breaks}",
         )
     )
@@ -342,7 +435,11 @@ def compare_snapshots(before: FormattingSnapshot, after: FormattingSnapshot, *, 
         FormatCheck(
             check="Paragraph and character styles in use",
             status="preserved" if not lost_styles else "changed_expected",
-            detail=("No styles lost." if not lost_styles else f"No longer used (replaced instructional text): {', '.join(sorted(lost_styles))}"),
+            detail=(
+                "No styles lost."
+                if not lost_styles
+                else f"No longer used (replaced instructional text): {', '.join(sorted(lost_styles))}"
+            ),
         )
     )
     lost_fonts = before.fonts_used - after.fonts_used
@@ -350,13 +447,17 @@ def compare_snapshots(before: FormattingSnapshot, after: FormattingSnapshot, *, 
         FormatCheck(
             check="Direct font formatting",
             status="preserved" if not lost_fonts else "changed_expected",
-            detail="All fonts still in use." if not lost_fonts else f"No longer used: {', '.join(sorted(lost_fonts))}",
+            detail="All fonts still in use."
+            if not lost_fonts
+            else f"No longer used: {', '.join(sorted(lost_fonts))}",
         )
     )
     checks.append(
         FormatCheck(
             check="Numbered and bulleted lists",
-            status="preserved" if after.list_paragraphs >= before.list_paragraphs else "changed_expected",
+            status="preserved"
+            if after.list_paragraphs >= before.list_paragraphs
+            else "changed_expected",
             detail=f"{before.list_paragraphs} → {after.list_paragraphs} list paragraph(s)",
         )
     )

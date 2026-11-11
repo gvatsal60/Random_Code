@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import docx
+from document_engine.placeholder_manager import (find_placeholders,
+                                                 remaining_placeholders,
+                                                 replace_placeholders)
 from docx.shared import Pt, RGBColor
-
-from document_engine.placeholder_manager import find_placeholders, remaining_placeholders, replace_placeholders
 
 
 def _doc_with_split_placeholder():
@@ -42,7 +43,7 @@ def test_multiline_value_becomes_line_breaks():
     doc = docx.Document()
     p = doc.add_paragraph("Address: {{address}} (end)")
     replace_placeholders(doc, {"address": "1 Main St\nSpringfield"})
-    xml = p._p.xml  # noqa: SLF001
+    xml = p._p.xml
     assert "<w:br/>" in xml
     assert p.text.replace("\n", "|") == "Address: 1 Main St|Springfield (end)"
 
@@ -60,14 +61,19 @@ def test_headers_footers_tables_and_hyperlinks(sample_template):
     doc = docx.Document(str(sample_template))
     keys = {h.key for h in find_placeholders(doc)}
     assert "company_name" in keys
-    replace_placeholders(doc, {"company_name": "ACME", "prepared_by": "Jo", "reference_number": "R-1"})
+    replace_placeholders(
+        doc, {"company_name": "ACME", "prepared_by": "Jo",
+              "reference_number": "R-1"}
+    )
     header_text = "".join(p.text for p in doc.sections[0].header.paragraphs)
     footer_text = "".join(p.text for p in doc.sections[0].footer.paragraphs)
     assert "ACME — Confidential" in header_text
     assert "Prepared by Jo" in footer_text
     assert doc.tables[0].cell(2, 1).text == "R-1"
     body_xml = doc.element.body.xml
-    assert "ACME" in body_xml and "w:hyperlink" in body_xml  # hyperlink element kept around replaced text
+    assert (
+        "ACME" in body_xml and "w:hyperlink" in body_xml
+    )  # hyperlink element kept around replaced text
 
 
 def test_text_box_placeholders(tmp_path):
@@ -77,10 +83,12 @@ def test_text_box_placeholders(tmp_path):
     doc = docx.Document()
     p = doc.add_paragraph()
     nsdecl = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"'
-    run = parse_xml(f'<w:r {nsdecl}><w:t>Box: </w:t></w:r>')
-    box = parse_xml(f'<w:r {nsdecl}><w:pict><w:txbxContent><w:p><w:r><w:t>{{{{boxed}}}}</w:t></w:r></w:p></w:txbxContent></w:pict></w:r>')
-    p._p.append(run)  # noqa: SLF001
-    p._p.append(box)  # noqa: SLF001
+    run = parse_xml(f"<w:r {nsdecl}><w:t>Box: </w:t></w:r>")
+    box = parse_xml(
+        f"<w:r {nsdecl}><w:pict><w:txbxContent><w:p><w:r><w:t>{{{{boxed}}}}</w:t></w:r></w:p></w:txbxContent></w:pict></w:r>"
+    )
+    p._p.append(run)
+    p._p.append(box)
     hits = find_placeholders(doc)
     assert [(h.key, h.location) for h in hits] == [("boxed", "textbox")]
     replace_placeholders(doc, {"boxed": "inside"})

@@ -21,22 +21,18 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import docx
+from document_engine.formatting_preserver import (NS, add_text_run,
+                                                  clean_paragraph_properties,
+                                                  compare_snapshots,
+                                                  is_structural, new_paragraph,
+                                                  reference_run_properties,
+                                                  snapshot)
+from document_engine.placeholder_manager import (remaining_placeholders,
+                                                 replace_placeholders)
+from document_engine.template_parser import Block, analyze_document
 from docx.document import Document as DocxDocument
 from docx.oxml.ns import qn
 from lxml import etree
-
-from document_engine.formatting_preserver import (
-    NS,
-    add_text_run,
-    clean_paragraph_properties,
-    compare_snapshots,
-    is_structural,
-    new_paragraph,
-    reference_run_properties,
-    snapshot,
-)
-from document_engine.placeholder_manager import remaining_placeholders, replace_placeholders
-from document_engine.template_parser import Block, analyze_document
 from models.agent_models import InsertMode, SectionDraft
 from models.document_models import WriteReport
 
@@ -70,12 +66,17 @@ def parse_content(content: str) -> list[ContentBlock]:
     i = 0
     while i < len(lines):
         line = lines[i]
-        if _TABLE_ROW.match(line) and i + 1 < len(lines) and _TABLE_SEP.match(lines[i + 1]):
+        if (
+            _TABLE_ROW.match(line)
+            and i + 1 < len(lines)
+            and _TABLE_SEP.match(lines[i + 1])
+        ):
             flush()
             rows = [[c.strip() for c in line.strip().strip("|").split("|")]]
             i += 2
             while i < len(lines) and _TABLE_ROW.match(lines[i]):
-                rows.append([c.strip() for c in lines[i].strip().strip("|").split("|")])
+                rows.append([c.strip()
+                            for c in lines[i].strip().strip("|").split("|")])
                 i += 1
             blocks.append(ContentBlock("table", rows=rows))
             continue
@@ -122,7 +123,9 @@ class ListFormatter:
             self.numbering = None
         self.bullet_ppr = self._find_list_ppr("bullet")
         self.number_ppr = self._find_list_ppr("number")
-        self.style_ids = {s.name: s.style_id for s in doc.styles if s.type == 1}  # paragraph styles
+        self.style_ids = {
+            s.name: s.style_id for s in doc.styles if s.type == 1
+        }  # paragraph styles
         self.used_numbering = False
         self._restart_num_id: str | None = None
 
@@ -136,7 +139,9 @@ class ListFormatter:
         if abstract is None:
             return None
         aid = abstract.get(qn("w:val"))
-        lvl = self.numbering.find(f"w:abstractNum[@w:abstractNumId='{aid}']/w:lvl[@w:ilvl='{ilvl}']", NS)
+        lvl = self.numbering.find(
+            f"w:abstractNum[@w:abstractNumId='{aid}']/w:lvl[@w:ilvl='{ilvl}']", NS
+        )
         fmt = lvl.find("w:numFmt", NS) if lvl is not None else None
         return fmt.get(qn("w:val")) if fmt is not None else None
 
@@ -146,10 +151,14 @@ class ListFormatter:
             num_pr = ppr.find("w:numPr", NS) if ppr is not None else None
             if num_pr is None:
                 continue
-            num_id_el, ilvl_el = num_pr.find("w:numId", NS), num_pr.find("w:ilvl", NS)
+            num_id_el, ilvl_el = num_pr.find(
+                "w:numId", NS), num_pr.find("w:ilvl", NS)
             if num_id_el is None:
                 continue
-            fmt = self._num_format(num_id_el.get(qn("w:val")), ilvl_el.get(qn("w:val")) if ilvl_el is not None else "0")
+            fmt = self._num_format(
+                num_id_el.get(qn("w:val")),
+                ilvl_el.get(qn("w:val")) if ilvl_el is not None else "0",
+            )
             if fmt is None or fmt == "none":
                 continue
             if (kind == "bullet") == (fmt == "bullet"):
@@ -162,15 +171,20 @@ class ListFormatter:
             return self.number_ppr
         if self._restart_num_id is None:
             num_id_el = self.number_ppr.find("w:numPr/w:numId", NS)
-            src = self.numbering.find(f"w:num[@w:numId='{num_id_el.get(qn('w:val'))}']", NS)
+            src = self.numbering.find(
+                f"w:num[@w:numId='{num_id_el.get(qn('w:val'))}']", NS
+            )
             if src is None:
                 return self.number_ppr
-            existing = [int(n.get(qn("w:numId"))) for n in self.numbering.findall("w:num", NS)]
+            existing = [
+                int(n.get(qn("w:numId"))) for n in self.numbering.findall("w:num", NS)
+            ]
             new_id = str(max(existing) + 1)
             new_num = etree.SubElement(self.numbering, qn("w:num"))
             new_num.set(qn("w:numId"), new_id)
             abstract = etree.SubElement(new_num, qn("w:abstractNumId"))
-            abstract.set(qn("w:val"), src.find("w:abstractNumId", NS).get(qn("w:val")))
+            abstract.set(qn("w:val"), src.find(
+                "w:abstractNumId", NS).get(qn("w:val")))
             override = etree.SubElement(new_num, qn("w:lvlOverride"))
             override.set(qn("w:ilvl"), "0")
             start = etree.SubElement(override, qn("w:startOverride"))
@@ -184,7 +198,9 @@ class ListFormatter:
     def start_numbered_list(self) -> None:
         self._restart_num_id = None
 
-    def paragraph_properties(self, kind: str, base_ppr: etree._Element | None) -> tuple[etree._Element | None, bool]:
+    def paragraph_properties(
+        self, kind: str, base_ppr: etree._Element | None
+    ) -> tuple[etree._Element | None, bool]:
         """Return (pPr, needs_text_prefix) for a list item.
 
         Preference: the template's own list formatting, then the built-in list styles, then the body
@@ -208,13 +224,19 @@ class DocumentWriter:
     def __init__(self, template_path: Path | str) -> None:
         self.template_path = Path(template_path)
         self.doc = docx.Document(str(self.template_path))
-        self.structure, self.blocks = analyze_document(self.doc, self.template_path.name, "")
+        self.structure, self.blocks = analyze_document(
+            self.doc, self.template_path.name, ""
+        )
         self.lists = ListFormatter(self.doc)
         self.report = WriteReport()
-        self._first_table = next((b.element for b in self.blocks if b.kind == "tbl"), None)
+        self._first_table = next(
+            (b.element for b in self.blocks if b.kind == "tbl"), None
+        )
 
     # .................................................................. rendering helpers
-    def _render(self, content: str, base_ppr: etree._Element | None, rpr: etree._Element | None) -> list[etree._Element]:
+    def _render(
+        self, content: str, base_ppr: etree._Element | None, rpr: etree._Element | None
+    ) -> list[etree._Element]:
         elements: list[etree._Element] = []
         previous_kind = None
         number_counter = 0
@@ -227,10 +249,15 @@ class DocumentWriter:
                 self.lists.start_numbered_list()
                 number_counter = 0
             if block.kind in ("bullet", "number"):
-                ppr, fallback = self.lists.paragraph_properties(block.kind, base_ppr)
+                ppr, fallback = self.lists.paragraph_properties(
+                    block.kind, base_ppr)
                 if block.kind == "number":
                     number_counter += 1
-                prefix = ("• " if block.kind == "bullet" else f"{number_counter}. ") if fallback else ""
+                prefix = (
+                    ("• " if block.kind == "bullet" else f"{number_counter}. ")
+                    if fallback
+                    else ""
+                )
                 p = new_paragraph(ppr)
                 text = prefix + block.text
             else:
@@ -242,10 +269,12 @@ class DocumentWriter:
             previous_kind = block.kind
         return elements
 
-    def _make_table(self, rows: list[list[str]], rpr: etree._Element | None) -> etree._Element:
+    def _make_table(
+        self, rows: list[list[str]], rpr: etree._Element | None
+    ) -> etree._Element:
         cols = max(len(r) for r in rows) if rows else 1
         table = self.doc.add_table(rows=len(rows), cols=cols)
-        tbl = table._tbl  # noqa: SLF001
+        tbl = table._tbl
         if self._first_table is not None:
             src_pr = self._first_table.find("w:tblPr", NS)
             if src_pr is not None:
@@ -259,18 +288,28 @@ class DocumentWriter:
         for r_idx, row in enumerate(rows):
             for c_idx in range(cols):
                 cell = table.cell(r_idx, c_idx)
-                p = cell.paragraphs[0]._p  # noqa: SLF001
+                p = cell.paragraphs[0]._p
                 text = row[c_idx] if c_idx < len(row) else ""
                 for piece, bold, italic in _inline_runs(text):
-                    add_text_run(p, piece, rpr, bold=bold or r_idx == 0, italic=italic)
-        tbl.getparent().remove(tbl)  # detach from the end of the body; inserted by the caller
+                    add_text_run(
+                        p, piece, rpr, bold=bold or r_idx == 0, italic=italic)
+        tbl.getparent().remove(
+            tbl
+        )  # detach from the end of the body; inserted by the caller
         return tbl
 
     # .................................................................. sections
-    def _reference_paragraph(self, section_blocks: list[Block], heading: Block) -> tuple[etree._Element | None, bool]:
+    def _reference_paragraph(
+        self, section_blocks: list[Block], heading: Block
+    ) -> tuple[etree._Element | None, bool]:
         """Pick the paragraph whose formatting new body text should inherit."""
         for b in section_blocks:
-            if b.kind == "p" and b.text.strip() and not b.instructional and b.heading_level is None:
+            if (
+                b.kind == "p"
+                and b.text.strip()
+                and not b.instructional
+                and b.heading_level is None
+            ):
                 return b.element, False
         for b in section_blocks:
             if b.kind == "p" and b.instructional:
@@ -280,7 +319,12 @@ class DocumentWriter:
                 return b.element, False
         start = heading.index + 1
         for b in self.blocks[start:]:
-            if b.kind == "p" and b.text.strip() and b.heading_level is None and not b.instructional:
+            if (
+                b.kind == "p"
+                and b.text.strip()
+                and b.heading_level is None
+                and not b.instructional
+            ):
                 return b.element, False
         return None, False
 
@@ -288,21 +332,37 @@ class DocumentWriter:
         section = self.structure.section(draft.target)
         if section is None or section.heading_block is None:
             self.report.sections_skipped.append(draft.target)
-            self.report.warnings.append(f"Section {draft.target} no longer exists in the template; skipped.")
+            self.report.warnings.append(
+                f"Section {draft.target} no longer exists in the template; skipped."
+            )
             return
         heading = self.blocks[section.heading_block]
         body = [self.blocks[i] for i in section.body_blocks]
         ref_p, from_instruction = self._reference_paragraph(body, heading)
-        base_ppr = clean_paragraph_properties(ref_p.find("w:pPr", NS)) if ref_p is not None else None
-        rpr = reference_run_properties(ref_p, strip_instruction_styling=from_instruction)
+        base_ppr = (
+            clean_paragraph_properties(ref_p.find("w:pPr", NS))
+            if ref_p is not None
+            else None
+        )
+        rpr = reference_run_properties(
+            ref_p, strip_instruction_styling=from_instruction
+        )
         new_elements = self._render(draft.content, base_ppr, rpr)
         if not new_elements:
             self.report.sections_skipped.append(draft.target)
             return
 
         mode = draft.insert_mode
-        instructions = [b for b in body if b.kind == "p" and b.instructional and not is_structural(b.element)]
-        empties = [b for b in body if b.kind == "p" and b.empty and not is_structural(b.element)]
+        instructions = [
+            b
+            for b in body
+            if b.kind == "p" and b.instructional and not is_structural(b.element)
+        ]
+        empties = [
+            b
+            for b in body
+            if b.kind == "p" and b.empty and not is_structural(b.element)
+        ]
 
         # Decide what to remove and where to insert.
         #  AUTO    – instructional text (and empty paragraphs of an otherwise empty section) is replaced in place;
@@ -312,15 +372,27 @@ class DocumentWriter:
         removable: list[Block]
         position: str
         if mode == InsertMode.REPLACE:
-            removable = [b for b in body if (b.kind == "p" and not is_structural(b.element)) or b.kind in ("tbl", "sdt")]
+            removable = [
+                b
+                for b in body
+                if (b.kind == "p" and not is_structural(b.element))
+                or b.kind in ("tbl", "sdt")
+            ]
             position = "first_removed"
         elif mode == InsertMode.APPEND:
             removable = instructions
             position = "after_content"
         else:
-            removable = instructions + (empties if not section.has_real_content else [])
-            position = "first_removed" if instructions or not section.has_real_content else "after_content"
-        removable = sorted({b.index: b for b in removable}.values(), key=lambda b: b.index)
+            removable = instructions + \
+                (empties if not section.has_real_content else [])
+            position = (
+                "first_removed"
+                if instructions or not section.has_real_content
+                else "after_content"
+            )
+        removable = sorted(
+            {b.index: b for b in removable}.values(), key=lambda b: b.index
+        )
         removed_ids = {b.index for b in removable}
 
         anchor = heading.element
@@ -331,7 +403,12 @@ class DocumentWriter:
         elif keep:
             # After the last content block, but before trailing page/section-break paragraphs.
             trailing = list(keep)
-            while trailing and trailing[-1].kind == "p" and is_structural(trailing[-1].element) and not trailing[-1].text.strip():
+            while (
+                trailing
+                and trailing[-1].kind == "p"
+                and is_structural(trailing[-1].element)
+                and not trailing[-1].text.strip()
+            ):
                 trailing.pop()
             if trailing:
                 anchor = trailing[-1].element
@@ -345,7 +422,9 @@ class DocumentWriter:
         self.report.sections_written.append(draft.target)
 
     # .................................................................. main entry
-    def apply(self, drafts: list[SectionDraft], extra_values: dict[str, str] | None = None) -> None:
+    def apply(
+        self, drafts: list[SectionDraft], extra_values: dict[str, str] | None = None
+    ) -> None:
         values: dict[str, str] = dict(extra_values or {})
         section_drafts: list[SectionDraft] = []
         for d in drafts:
@@ -354,8 +433,11 @@ class DocumentWriter:
             else:
                 section_drafts.append(d)
         # Sections are written bottom-up so earlier block indices stay valid.
-        order = {s.section_id: i for i, s in enumerate(self.structure.sections)}
-        for d in sorted(section_drafts, key=lambda x: order.get(x.target, -1), reverse=True):
+        order = {s.section_id: i for i,
+                 s in enumerate(self.structure.sections)}
+        for d in sorted(
+            section_drafts, key=lambda x: order.get(x.target, -1), reverse=True
+        ):
             self.write_section(d)
         result = replace_placeholders(self.doc, values)
         self.report.placeholders_replaced = result.counts
@@ -371,11 +453,19 @@ class DocumentWriter:
         self.doc.save(str(out_path))
         before = snapshot(self.template_path)
         after = snapshot(out_path)
-        self.report.format_checks = compare_snapshots(before, after, changed_parts_expected=getattr(self, "_touched_parts", set()))
+        self.report.format_checks = compare_snapshots(
+            before, after, changed_parts_expected=getattr(
+                self, "_touched_parts", set())
+        )
         return self.report
 
 
-def write_document(template_path: Path | str, out_path: Path | str, drafts: list[SectionDraft], extra_values: dict[str, str] | None = None) -> WriteReport:
+def write_document(
+    template_path: Path | str,
+    out_path: Path | str,
+    drafts: list[SectionDraft],
+    extra_values: dict[str, str] | None = None,
+) -> WriteReport:
     writer = DocumentWriter(template_path)
     writer.apply(drafts, extra_values)
     return writer.save(out_path)

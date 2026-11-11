@@ -16,14 +16,14 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from config import APP_NAME, APP_VERSION
 from mcp import StdioServerParameters, stdio_client
 from mcp.client.sse import sse_client
-from strands.tools.mcp import MCPClient
-
-from config import APP_NAME, APP_VERSION
 from models.mcp_models import AuthType, MCPServerConfig, TransportType
-from services.mcp_credential_manager import API_KEY, BEARER, OAUTH_SECRET, MCPCredentialManager
+from services.mcp_credential_manager import (API_KEY, BEARER, OAUTH_SECRET,
+                                             MCPCredentialManager)
 from services.security import PolicyError, validate_stdio_command, validate_url
+from strands.tools.mcp import MCPClient
 
 
 @dataclass
@@ -33,37 +33,58 @@ class ClientPolicy:
     allow_http_remote: bool = False
 
 
-def validate_server_config(cfg: MCPServerConfig, policy: ClientPolicy, secrets: MCPCredentialManager | None = None) -> list[str]:
+def validate_server_config(
+    cfg: MCPServerConfig,
+    policy: ClientPolicy,
+    secrets: MCPCredentialManager | None = None,
+) -> list[str]:
     """Return validation problems for a server configuration (empty list when valid)."""
     problems: list[str] = []
     try:
         if cfg.transport == TransportType.STDIO:
-            validate_stdio_command(cfg.command or "", cfg.args, policy.stdio_allowlist)
+            validate_stdio_command(
+                cfg.command or "", cfg.args, policy.stdio_allowlist)
             if cfg.cwd:
                 path = Path(cfg.cwd).expanduser()
                 if not path.is_dir():
-                    problems.append(f"Working directory does not exist: {cfg.cwd}")
+                    problems.append(
+                        f"Working directory does not exist: {cfg.cwd}")
             overlap = set(cfg.env) & set(cfg.secret_env_keys)
             if overlap:
-                problems.append(f"Variables defined both as plain and secret: {', '.join(sorted(overlap))}")
+                problems.append(
+                    f"Variables defined both as plain and secret: {', '.join(sorted(overlap))}"
+                )
         else:
-            validate_url(cfg.url or "", allow_http_localhost=policy.allow_http_localhost, allow_http_remote=policy.allow_http_remote)
+            validate_url(
+                cfg.url or "",
+                allow_http_localhost=policy.allow_http_localhost,
+                allow_http_remote=policy.allow_http_remote,
+            )
             lowered = {h.lower() for h in cfg.headers}
             if cfg.auth_type == AuthType.BEARER and "authorization" in lowered:
-                problems.append("Remove the plain 'Authorization' header; the bearer token sets it.")
+                problems.append(
+                    "Remove the plain 'Authorization' header; the bearer token sets it."
+                )
             if secrets is not None:
                 if cfg.auth_type == AuthType.BEARER and not secrets.has(cfg.id, BEARER):
                     problems.append("A bearer token is required.")
-                if cfg.auth_type == AuthType.API_KEY_HEADER and not secrets.has(cfg.id, API_KEY):
+                if cfg.auth_type == AuthType.API_KEY_HEADER and not secrets.has(
+                    cfg.id, API_KEY
+                ):
                     problems.append("An API key is required.")
-                if cfg.auth_type == AuthType.OAUTH_CLIENT_CREDENTIALS and not secrets.has(cfg.id, OAUTH_SECRET):
+                if (
+                    cfg.auth_type == AuthType.OAUTH_CLIENT_CREDENTIALS
+                    and not secrets.has(cfg.id, OAUTH_SECRET)
+                ):
                     problems.append("An OAuth client secret is required.")
     except PolicyError as exc:
         problems.append(str(exc))
     return problems
 
 
-def build_headers(cfg: MCPServerConfig, secrets: MCPCredentialManager) -> dict[str, str]:
+def build_headers(
+    cfg: MCPServerConfig, secrets: MCPCredentialManager
+) -> dict[str, str]:
     headers = dict(cfg.headers)
     headers.update(secrets.secret_headers(cfg.id, cfg.secret_header_names))
     if cfg.auth_type == AuthType.BEARER:
@@ -111,7 +132,7 @@ def build_client(
         else:
             errlog = open(os.devnull, "w")  # noqa: SIM115
 
-        def _stdio():  # noqa: ANN202
+        def _stdio():
             return stdio_client(params, errlog=errlog)
 
         client = MCPClient(_stdio, **common)
@@ -130,10 +151,16 @@ def build_client(
             }
             if cfg.oauth_scopes:
                 auth["scopes"] = list(cfg.oauth_scopes)
-        return MCPClient(url=url, headers=headers or None, auth=auth, **common)  # type: ignore[arg-type]
+        # type: ignore[arg-type]
+        return MCPClient(url=url, headers=headers or None, auth=auth, **common)
 
     # Legacy SSE transport
-    def _sse():  # noqa: ANN202
-        return sse_client(url, headers=headers or None, timeout=float(min(cfg.startup_timeout, 60)), sse_read_timeout=float(max(cfg.tool_timeout, 60)))
+    def _sse():
+        return sse_client(
+            url,
+            headers=headers or None,
+            timeout=float(min(cfg.startup_timeout, 60)),
+            sse_read_timeout=float(max(cfg.tool_timeout, 60)),
+        )
 
     return MCPClient(_sse, **common)

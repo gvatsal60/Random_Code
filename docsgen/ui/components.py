@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import contextlib
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import streamlit as st
-
 from services.security import sanitize_error
 
 NAV_KEY = "nav_page"
@@ -64,7 +64,7 @@ def page_header(title: str, subtitle: str = "", icon: str = "") -> None:
 
 
 @contextlib.contextmanager
-def guarded(action: str):  # noqa: ANN201
+def guarded(action: str):
     """Show errors from an action as a friendly message instead of a traceback."""
     try:
         yield
@@ -79,10 +79,15 @@ def flash(message: str, kind: str = "success") -> None:
 
 def show_flashes() -> None:
     for kind, message in st.session_state.pop("_flash", []):
-        getattr(st, kind if kind in ("success", "info", "warning", "error") else "info")(message)
+        getattr(
+            st, kind if kind in (
+                "success", "info", "warning", "error") else "info"
+        )(message)
 
 
-def confirm_button(label: str, key: str, confirm_label: str = "Confirm", **kwargs: Any) -> bool:
+def confirm_button(
+    label: str, key: str, confirm_label: str = "Confirm", **kwargs: Any
+) -> bool:
     """Two-step button for destructive actions."""
     armed_key = f"{key}__armed"
     if st.session_state.get(armed_key):
@@ -120,6 +125,7 @@ def format_kv_lines(values: dict[str, str], sep: str = "=") -> str:
 def run_with_status(label: str, fn: Callable[[Callable[[str, str], None]], Any]) -> Any:
     """Run ``fn(progress)`` inside an ``st.status`` box that shows progress messages."""
     with st.status(label, expanded=True) as status:
+
         def progress(step: str, message: str) -> None:
             status.write(f"**{step}** — {message}")
             status.update(label=f"{label}: {step}")

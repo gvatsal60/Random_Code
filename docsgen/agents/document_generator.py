@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from agents.base import GROUNDING_RULES, AgentSpec
-from agents.prompting import compact_json, sources_digest, task_block, template_digest, user_answers_block
-from models.agent_models import AgentRole, ExtractionResult, GenerationResult, ResearchResult, TaskType, TemplateAnalysis
+from agents.prompting import (compact_json, sources_digest, task_block,
+                              template_digest, user_answers_block)
+from models.agent_models import (AgentRole, ExtractionResult, GenerationResult,
+                                 ResearchResult, TaskType, TemplateAnalysis)
 from tools.context import DocumentContext
 
 SPEC = AgentSpec(
@@ -45,18 +47,30 @@ def build_prompt(
     budget: int,
     existing_content: dict[str, str] | None = None,
 ) -> str:
-    parts = [task_block(task, instructions, targets), "TEMPLATE OUTLINE:", template_digest(ctx, 8_000)]
+    parts = [
+        task_block(task, instructions, targets),
+        "TEMPLATE OUTLINE:",
+        template_digest(ctx, 8_000),
+    ]
     if analysis is not None:
         parts += ["TEMPLATE REQUIREMENTS:", compact_json(analysis, 10_000)]
     if extraction is not None:
-        parts += ["EXTRACTED FACTS AND MAPPINGS:", compact_json(extraction, 20_000)]
+        parts += ["EXTRACTED FACTS AND MAPPINGS:",
+                  compact_json(extraction, 20_000)]
     if research is not None and research.performed:
         parts += ["RESEARCH FINDINGS:", compact_json(research, 6_000)]
     if answers:
         parts.append(user_answers_block(answers))
     if existing_content:
-        parts.append("EXISTING CONTENT TO REWRITE OR IMPROVE (keep all facts, do not add new ones):")
+        parts.append(
+            "EXISTING CONTENT TO REWRITE OR IMPROVE (keep all facts, do not add new ones):"
+        )
         parts += [f"[{k}]\n{v[:6000]}" for k, v in existing_content.items()]
-    parts += ["SOURCE EXCERPTS (for wording and verification):", sources_digest(ctx, budget // 2)]
-    parts.append(f"Generate content for exactly these targets: {', '.join(targets)}. Return the GenerationResult.")
+    parts += [
+        "SOURCE EXCERPTS (for wording and verification):",
+        sources_digest(ctx, budget // 2),
+    ]
+    parts.append(
+        f"Generate content for exactly these targets: {', '.join(targets)}. Return the GenerationResult."
+    )
     return "\n\n".join(parts)

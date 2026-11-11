@@ -53,7 +53,8 @@ def _check_auth(ctx: Context | None) -> None:
     headers = ctx.headers or {}
     auth = headers.get("authorization") or headers.get("Authorization") or ""
     if auth != f"Bearer {_EXPECTED_TOKEN}":
-        raise PermissionError("Unauthorized: a valid bearer token is required.")
+        raise PermissionError(
+            "Unauthorized: a valid bearer token is required.")
 
 
 @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))
@@ -64,7 +65,9 @@ def lookup_company(name: str, ctx: Context) -> dict:
         name: Company name, for example "Northwind Analytics".
     """
     _check_auth(ctx)
-    key = re.sub(r"\s+", " ", name.lower().replace("ltd.", "").replace("ltd", "")).strip()
+    key = re.sub(
+        r"\s+", " ", name.lower().replace("ltd.", "").replace("ltd", "")
+    ).strip()
     for known, data in _COMPANIES.items():
         if key in known or known in key:
             return {"found": True, "source": "DocsGen demo directory", **data}
@@ -99,8 +102,12 @@ def delete_record(record_id: str, ctx: Context) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--http", action="store_true", help="Serve Streamable HTTP instead of stdio")
-    parser.add_argument("--sse", action="store_true", help="Serve the legacy SSE transport")
+    parser.add_argument(
+        "--http", action="store_true", help="Serve Streamable HTTP instead of stdio"
+    )
+    parser.add_argument(
+        "--sse", action="store_true", help="Serve the legacy SSE transport"
+    )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()

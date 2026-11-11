@@ -6,7 +6,6 @@ import difflib
 from pathlib import Path
 
 import docx
-
 from document_engine.formatting_preserver import element_text, iter_body_blocks
 from document_engine.placeholder_manager import document_parts
 from models.document_models import BlockDiff, ComparisonReport
@@ -14,17 +13,25 @@ from models.document_models import BlockDiff, ComparisonReport
 
 def document_blocks(path: Path | str, include_headers: bool = True) -> list[str]:
     doc = docx.Document(str(path))
-    blocks = [element_text(el).strip() for el in iter_body_blocks(doc.element.body)]
+    blocks = [element_text(el).strip()
+              for el in iter_body_blocks(doc.element.body)]
     if include_headers:
         for partname, kind, root in document_parts(doc):
             if kind != "body":
-                text = "\n".join(element_text(p) for p in root.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}p")).strip()
+                text = "\n".join(
+                    element_text(p)
+                    for p in root.iter(
+                        "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}p"
+                    )
+                ).strip()
                 if text:
                     blocks.append(f"[{kind}] {text}")
     return [b for b in blocks if b]
 
 
-def compare_documents(original: Path | str, generated: Path | str, max_diffs: int = 200) -> ComparisonReport:
+def compare_documents(
+    original: Path | str, generated: Path | str, max_diffs: int = 200
+) -> ComparisonReport:
     a, b = document_blocks(original), document_blocks(generated)
     matcher = difflib.SequenceMatcher(None, a, b, autojunk=False)
     diffs: list[BlockDiff] = []
@@ -35,10 +42,13 @@ def compare_documents(original: Path | str, generated: Path | str, max_diffs: in
             continue
         if op == "insert":
             added += j2 - j1
-            diffs.extend(BlockDiff(change="added", generated=text) for text in b[j1:j2])
+            diffs.extend(BlockDiff(change="added", generated=text)
+                         for text in b[j1:j2])
         elif op == "delete":
             removed += i2 - i1
-            diffs.extend(BlockDiff(change="removed", original=text) for text in a[i1:i2])
+            diffs.extend(
+                BlockDiff(change="removed", original=text) for text in a[i1:i2]
+            )
         else:
             left, right = a[i1:i2], b[j1:j2]
             for k in range(max(len(left), len(right))):
@@ -47,7 +57,14 @@ def compare_documents(original: Path | str, generated: Path | str, max_diffs: in
                 if lo and ro:
                     modified += 1
                     ratio = difflib.SequenceMatcher(None, lo, ro).ratio()
-                    diffs.append(BlockDiff(change="modified", original=lo, generated=ro, similarity=round(ratio, 2)))
+                    diffs.append(
+                        BlockDiff(
+                            change="modified",
+                            original=lo,
+                            generated=ro,
+                            similarity=round(ratio, 2),
+                        )
+                    )
                 elif lo:
                     removed += 1
                     diffs.append(BlockDiff(change="removed", original=lo))
@@ -67,4 +84,8 @@ def compare_documents(original: Path | str, generated: Path | str, max_diffs: in
 
 def unified_text_diff(original: Path | str, generated: Path | str) -> str:
     a, b = document_blocks(original), document_blocks(generated)
-    return "\n".join(difflib.unified_diff(a, b, fromfile="original", tofile="generated", lineterm="", n=1))
+    return "\n".join(
+        difflib.unified_diff(
+            a, b, fromfile="original", tofile="generated", lineterm="", n=1
+        )
+    )

@@ -21,7 +21,7 @@ python scripts/make_samples.py         # optional: creates sample_data/ to try t
 streamlit run app.py
 ```
 
-Open http://localhost:8501, then:
+Open <http://localhost:8501>, then:
 
 1. **AI Provider Configuration**: pick a provider, enter credentials, choose a model, then click **Test Connection** and **Apply**.
 2. **MCP Tool Configuration** (optional): add servers and connect them. Then enable tools and authorize them per agent in **Tool Registry**.
@@ -80,7 +80,7 @@ provider) applies to the next agent run without touching the others.
 ### Agent workflow
 
 | Agent | Role |
-|---|---|
+| --- | --- |
 | Document Analyzer | Reads the template: sections, placeholders, tables, which parts need content |
 | Information Extractor | Pulls facts from source documents with source citations |
 | Research Agent | Optional; only runs if enabled on the Instructions page, and only with authorized tools |
@@ -97,7 +97,7 @@ and footers), so the template's look is kept.
 ## AI providers
 
 | Provider | Auth in the UI | Notes |
-|---|---|---|
+| --- | --- | --- |
 | OpenAI | API key, optional base URL / organization | Base URL works for any OpenAI-compatible endpoint |
 | Anthropic | API key | |
 | Google Gemini | API key | |

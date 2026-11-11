@@ -48,23 +48,33 @@ def _check_zip(data: bytes, required: str, kind: str) -> None:
     try:
         zf = zipfile.ZipFile(BytesIO(data))
     except zipfile.BadZipFile as exc:
-        raise UploadRejected(f"The file is not a valid {kind} document.") from exc
+        raise UploadRejected(
+            f"The file is not a valid {kind} document.") from exc
     with zf:
         infos = zf.infolist()
         if len(infos) > MAX_ZIP_ENTRIES:
-            raise UploadRejected("The document contains too many internal parts.")
+            raise UploadRejected(
+                "The document contains too many internal parts.")
         total = 0
         names = set()
         for info in infos:
             name = info.filename
             if name.startswith("/") or ".." in Path(name).parts or "\\" in name:
-                raise UploadRejected("The document contains unsafe internal paths.")
+                raise UploadRejected(
+                    "The document contains unsafe internal paths.")
             total += info.file_size
-            if info.compress_size and info.file_size / max(info.compress_size, 1) > MAX_ZIP_RATIO and info.file_size > 10 * 1024 * 1024:
-                raise UploadRejected("The document is suspiciously compressed (possible ZIP bomb).")
+            if (
+                info.compress_size
+                and info.file_size / max(info.compress_size, 1) > MAX_ZIP_RATIO
+                and info.file_size > 10 * 1024 * 1024
+            ):
+                raise UploadRejected(
+                    "The document is suspiciously compressed (possible ZIP bomb)."
+                )
             names.add(name.lower())
         if total > MAX_ZIP_UNCOMPRESSED:
-            raise UploadRejected("The document is too large when uncompressed.")
+            raise UploadRejected(
+                "The document is too large when uncompressed.")
         if "[content_types].xml" not in names or required not in names:
             raise UploadRejected(f"The file is not a valid {kind} document.")
         if any(n.endswith("vbaproject.bin") for n in names):
@@ -74,15 +84,21 @@ def _check_zip(data: bytes, required: str, kind: str) -> None:
             raise UploadRejected("Macro-enabled documents are not accepted.")
 
 
-def sniff_and_validate(name: str, data: bytes, allowed: set[str], max_bytes: int) -> str:
+def sniff_and_validate(
+    name: str, data: bytes, allowed: set[str], max_bytes: int
+) -> str:
     """Validate an upload and return its normalized type. Raises UploadRejected."""
     if not data:
         raise UploadRejected("The file is empty.")
     if len(data) > max_bytes:
-        raise UploadRejected(f"The file exceeds the {max_bytes // (1024 * 1024)} MB limit.")
+        raise UploadRejected(
+            f"The file exceeds the {max_bytes // (1024 * 1024)} MB limit."
+        )
     ext = Path(name).suffix.lower().lstrip(".")
     if ext not in allowed:
-        raise UploadRejected(f"Unsupported file type '.{ext}'. Allowed: {', '.join(sorted(allowed))}.")
+        raise UploadRejected(
+            f"Unsupported file type '.{ext}'. Allowed: {', '.join(sorted(allowed))}."
+        )
     if ext == "docx":
         _check_zip(data, "word/document.xml", "Word")
     elif ext == "xlsx":
@@ -92,7 +108,9 @@ def sniff_and_validate(name: str, data: bytes, allowed: set[str], max_bytes: int
             raise UploadRejected("The file is not a valid PDF document.")
     elif ext == "xls":
         if not data.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"):
-            raise UploadRejected("The file is not a valid legacy Excel (.xls) document.")
+            raise UploadRejected(
+                "The file is not a valid legacy Excel (.xls) document."
+            )
     elif ext in ("txt", "csv"):
         sample = data[:65536]
         if b"\x00" in sample:
@@ -103,12 +121,16 @@ def sniff_and_validate(name: str, data: bytes, allowed: set[str], max_bytes: int
             try:
                 sample.decode("cp1252")
             except UnicodeDecodeError as exc:
-                raise UploadRejected("The text encoding is not supported (use UTF-8).") from exc
+                raise UploadRejected(
+                    "The text encoding is not supported (use UTF-8)."
+                ) from exc
     return ext
 
 
 class FileService:
-    def __init__(self, base_dir: Path, max_upload_mb: int, retention_hours: int = 24) -> None:
+    def __init__(
+        self, base_dir: Path, max_upload_mb: int, retention_hours: int = 24
+    ) -> None:
         self.session_dir = base_dir / uuid.uuid4().hex
         self.session_dir.mkdir(parents=True, exist_ok=True)
         self.max_bytes = max_upload_mb * 1024 * 1024

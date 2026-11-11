@@ -6,17 +6,26 @@ from __future__ import annotations
 import sys
 
 import pytest
-from streamlit.testing.v1 import AppTest
-
 from models.agent_models import TaskType
 from services.workflow_service import WorkflowService
+from streamlit.testing.v1 import AppTest
 from tests import scripted_outputs as so
 from tests.conftest import ROOT, load_sources, load_template
 from tests.helpers import ScriptedModel
 
 PAGES = [
-    "Dashboard", "AI Provider Configuration", "MCP Tool Configuration", "Tool Registry", "Document Template Upload", "Source Documents",
-    "AI Instructions", "Agent Workflow", "Document Review", "Document Generation", "History and Downloads", "Application Settings",
+    "Dashboard",
+    "AI Provider Configuration",
+    "MCP Tool Configuration",
+    "Tool Registry",
+    "Document Template Upload",
+    "Source Documents",
+    "AI Instructions",
+    "Agent Workflow",
+    "Document Review",
+    "Document Generation",
+    "History and Downloads",
+    "Application Settings",
 ]
 
 
@@ -26,7 +35,8 @@ def app(data_dir):
     at.run()
     assert not at.exception
     container = at.session_state["_docsgen_container"]
-    container.settings.stdio_command_allowlist.append(sys.executable.rsplit("/", 1)[-1])
+    container.settings.stdio_command_allowlist.append(
+        sys.executable.rsplit("/", 1)[-1])
     yield at, container
     container.shutdown()
 
@@ -56,16 +66,28 @@ def test_all_pages_render_empty_and_populated(app):
 
 def test_ai_provider_configuration_flow(app):
     at, c = app
-    c.llm._factory = lambda cfg, secrets: ScriptedModel({}, text_reply="OK")  # noqa: SLF001
+    c.llm._factory = lambda cfg, secrets: ScriptedModel({}, text_reply="OK")
     goto(at, "AI Provider Configuration")
-    at.selectbox(key="ai_provider").set_value(__import__("models.provider_models", fromlist=["ProviderId"]).ProviderId.ANTHROPIC).run()
-    at.text_input(key="ai_anthropic_secret_api_key").input("sk-ant-ui-test-1234567890").run()
-    at.text_input(key="ai_anthropic_model_custom").input("claude-ui-test").run()
+    at.selectbox(key="ai_provider").set_value(
+        __import__(
+            "models.provider_models", fromlist=["ProviderId"]
+        ).ProviderId.ANTHROPIC
+    ).run()
+    at.text_input(key="ai_anthropic_secret_api_key").input(
+        "sk-ant-ui-test-1234567890"
+    ).run()
+    at.text_input(key="ai_anthropic_model_custom").input(
+        "claude-ui-test").run()
     button(at, "Test connection").click().run()
-    assert any("Connected" in s.value for s in at.success), [s.value for s in at.success]
+    assert any("Connected" in s.value for s in at.success), [
+        s.value for s in at.success
+    ]
     button(at, "Apply configuration").click().run()
     assert c.llm.describe() == "Anthropic Claude · claude-ui-test"
-    assert c.credentials.get_secret("llm/anthropic", "api_key") == "sk-ant-ui-test-1234567890"
+    assert (
+        c.credentials.get_secret("llm/anthropic", "api_key")
+        == "sk-ant-ui-test-1234567890"
+    )
     assert c.credentials.secret_source("llm/anthropic", "api_key") == "session"
     # the secret never appears in rendered output
     rendered = " ".join(str(getattr(e, "value", "")) for e in at.main)
@@ -81,11 +103,16 @@ def test_mcp_server_add_connect_and_tool_toggle(app):
     at.text_input(key="mcpf_new_name").input("Demo Server").run()
     at.text_input(key="mcpf_new_id").input("demo").run()
     at.text_input(key="mcpf_new_cmd").input(sys.executable).run()
-    at.text_area(key="mcpf_new_args").input(str(ROOT / "mcp_servers" / "demo_server.py")).run()
+    at.text_area(key="mcpf_new_args").input(
+        str(ROOT / "mcp_servers" / "demo_server.py")
+    ).run()
     button(at, "Save & connect").click().run()
     assert not at.exception
     assert c.mcp.state("demo").status == "connected"
-    assert any("connected: 4 tool(s)" in s.value or "Saved and connected" in s.value for s in at.success)
+    assert any(
+        "connected: 4 tool(s)" in s.value or "Saved and connected" in s.value
+        for s in at.success
+    )
     assert c.mcp.is_persisted("demo")
     # Disable all tools through the UI
     button(at, "Disable all (filtered)").click().run()
@@ -98,11 +125,14 @@ def test_review_and_generation_flow(app):
     at, c = app
     load_template(c)
     load_sources(c)
-    c.llm._factory = lambda cfg, secrets: ScriptedModel(so.OUTPUTS)  # noqa: SLF001
-    c.credentials.set_secret("llm/openai", "api_key", "sk-ui-0000000000000", persist=False)
+    c.llm._factory = lambda cfg, secrets: ScriptedModel(so.OUTPUTS)
+    c.credentials.set_secret(
+        "llm/openai", "api_key", "sk-ui-0000000000000", persist=False
+    )
     from models.provider_models import ProviderConfig, ProviderId
 
-    c.llm.apply(ProviderConfig(provider=ProviderId.OPENAI, model_id="scripted"))
+    c.llm.apply(ProviderConfig(
+        provider=ProviderId.OPENAI, model_id="scripted"))
     state = WorkflowService.new_state(TaskType.GENERATE_COMPLETE, "Fill it.")
     c.session.workflow = state
     c.workflow.run_pipeline(state, c.document_context())
@@ -124,11 +154,14 @@ def test_workflow_page_runs_pipeline(app):
     at, c = app
     load_template(c)
     load_sources(c, names=("sample_source.txt",))
-    c.llm._factory = lambda cfg, secrets: ScriptedModel(so.OUTPUTS)  # noqa: SLF001
-    c.credentials.set_secret("llm/openai", "api_key", "sk-ui-0000000000000", persist=False)
+    c.llm._factory = lambda cfg, secrets: ScriptedModel(so.OUTPUTS)
+    c.credentials.set_secret(
+        "llm/openai", "api_key", "sk-ui-0000000000000", persist=False
+    )
     from models.provider_models import ProviderConfig, ProviderId
 
-    c.llm.apply(ProviderConfig(provider=ProviderId.OPENAI, model_id="scripted"))
+    c.llm.apply(ProviderConfig(
+        provider=ProviderId.OPENAI, model_id="scripted"))
     goto(at, "Agent Workflow")
     button(at, "▶ Run complete workflow").click().run()
     assert not at.exception, [e.value for e in at.exception]

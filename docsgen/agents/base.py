@@ -8,12 +8,12 @@ the registry authorizes for that agent.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Generic, TypeVar
-
-from pydantic import BaseModel
+from typing import Generic, TypeVar
 
 from models.agent_models import AGENT_LABELS, AgentRole
+from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
 

@@ -22,7 +22,9 @@ class MCPCredentialManager:
         return f"mcp/{server_id}"
 
     def set(self, server_id: str, name: str, value: str, persist: bool) -> None:
-        self._credentials.set_secret(self.namespace(server_id), name, value, persist=persist)
+        self._credentials.set_secret(
+            self.namespace(server_id), name, value, persist=persist
+        )
 
     def get(self, server_id: str, name: str) -> str | None:
         return self._credentials.get_secret(self.namespace(server_id), name)

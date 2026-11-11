@@ -8,7 +8,8 @@ from pathlib import Path
 
 from config import AppSettings, load_settings, setup_logging
 from models.agent_models import WorkflowState
-from models.document_models import GenerationRecord, SourceDocument, TemplateStructure
+from models.document_models import (GenerationRecord, SourceDocument,
+                                    TemplateStructure)
 from services.agent_manager import AgentManager
 from services.credential_manager import CredentialManager
 from services.extraction_service import ExtractionService
@@ -20,7 +21,9 @@ from services.mcp_credential_manager import MCPCredentialManager
 from services.mcp_manager import MCPManager
 from services.workflow_service import WorkflowService
 from storage.configuration_store import ConfigurationStore
-from storage.credential_store import EncryptedFileCredentialStore, LayeredCredentialStore, MemoryCredentialStore
+from storage.credential_store import (EncryptedFileCredentialStore,
+                                      LayeredCredentialStore,
+                                      MemoryCredentialStore)
 from tools.context import DocumentContext
 from tools.registry import ToolRegistry
 
@@ -42,7 +45,9 @@ class SessionData:
     workflow: WorkflowState | None = None
     history: list[GenerationRecord] = field(default_factory=list)
     instructions: str = ""
-    run_config: dict = field(default_factory=dict)  # task type, targets, research and approval choices
+    run_config: dict = field(
+        default_factory=dict
+    )  # task type, targets, research and approval choices
 
 
 class ServiceContainer:
@@ -52,28 +57,58 @@ class ServiceContainer:
         session_secrets = MemoryCredentialStore()
         persistent: EncryptedFileCredentialStore | None
         try:
-            persistent = EncryptedFileCredentialStore(settings.credentials_file, settings.master_key_file)
+            persistent = EncryptedFileCredentialStore(
+                settings.credentials_file, settings.master_key_file
+            )
         except Exception as exc:  # noqa: BLE001
-            logger.error("Encrypted credential storage unavailable: %s", type(exc).__name__)
+            logger.error(
+                "Encrypted credential storage unavailable: %s", type(
+                    exc).__name__
+            )
             persistent = None
-        self.credential_store = LayeredCredentialStore(session_secrets, persistent)
+        self.credential_store = LayeredCredentialStore(
+            session_secrets, persistent)
         self.credentials = CredentialManager(self.credential_store)
-        self.llm = LLMService(config_store, self.credentials, allow_http_remote=lambda: self.settings.allow_insecure_http_remote)
+        self.llm = LLMService(
+            config_store,
+            self.credentials,
+            allow_http_remote=lambda: self.settings.allow_insecure_http_remote,
+        )
 
         self.mcp_secrets = MCPCredentialManager(self.credentials)
-        connections = MCPConnectionManager(self.mcp_secrets, self.client_policy, settings.data_dir / "logs")
-        self.mcp = MCPManager(config_store, self.mcp_secrets, self.client_policy, connections, default_enabled=lambda: self.settings.new_tools_enabled_by_default)
+        connections = MCPConnectionManager(
+            self.mcp_secrets, self.client_policy, settings.data_dir / "logs"
+        )
+        self.mcp = MCPManager(
+            config_store,
+            self.mcp_secrets,
+            self.client_policy,
+            connections,
+            default_enabled=lambda: self.settings.new_tools_enabled_by_default,
+        )
         self.tools = ToolRegistry(config_store, self.mcp)
-        self.agents = AgentManager(self.llm, self.tools, timeout_provider=lambda: self.settings.agent_timeout_seconds)
-        self.workflow = WorkflowService(self.agents, settings.generated_dir, budget_provider=lambda: self.settings.agent_context_chars)
+        self.agents = AgentManager(
+            self.llm,
+            self.tools,
+            timeout_provider=lambda: self.settings.agent_timeout_seconds,
+        )
+        self.workflow = WorkflowService(
+            self.agents,
+            settings.generated_dir,
+            budget_provider=lambda: self.settings.agent_context_chars,
+        )
 
-        self.files = FileService(settings.uploads_dir, settings.max_upload_mb, settings.upload_retention_hours)
+        self.files = FileService(
+            settings.uploads_dir,
+            settings.max_upload_mb,
+            settings.upload_retention_hours,
+        )
         self.extraction = ExtractionService()
         self.session = SessionData()
         self.startup_messages: list[str] = []
 
     @classmethod
-    def create(cls, data_dir: Path | None = None) -> "ServiceContainer":
+    def create(cls, data_dir: Path | None = None) -> ServiceContainer:
         bootstrap = load_settings()
         if data_dir is not None:
             bootstrap = bootstrap.model_copy(update={"data_dir": data_dir})
@@ -87,7 +122,9 @@ class ServiceContainer:
         container = cls(settings, store)
         for server_id, state in container.mcp.connect_startup_servers().items():
             if state.status != "connected":
-                container.startup_messages.append(f"MCP server '{server_id}' could not connect on startup: {state.last_error}")
+                container.startup_messages.append(
+                    f"MCP server '{server_id}' could not connect on startup: {state.last_error}"
+                )
         return container
 
     # ------------------------------------------------------------------ helpers
@@ -111,14 +148,20 @@ class ServiceContainer:
         current = self.settings.model_dump()
         current.update(values)
         new = AppSettings(**current)
-        self.config_store.update("settings", {k: v for k, v in new.model_dump(mode="json").items() if k != "data_dir"})
+        self.config_store.update(
+            "settings",
+            {k: v for k, v in new.model_dump(
+                mode="json").items() if k != "data_dir"},
+        )
         self.settings = new
         setup_logging(new.log_level)
         return new
 
     # ------------------------------------------------------------------ lifecycle
     @staticmethod
-    def shutdown_resources(connections: MCPConnectionManager, files: FileService) -> None:
+    def shutdown_resources(
+        connections: MCPConnectionManager, files: FileService
+    ) -> None:
         try:
             connections.disconnect_all()
         finally:

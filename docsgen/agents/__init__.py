@@ -1,13 +1,7 @@
 """The six specialized DocsGen agents (built with Strands Agents)."""
 
-from agents import (
-    document_analyzer,
-    document_generator,
-    document_validator,
-    information_extractor,
-    quality_reviewer,
-    research_agent,
-)
+from agents import (document_analyzer, document_generator, document_validator,
+                    information_extractor, quality_reviewer, research_agent)
 from models.agent_models import AgentRole
 
 AGENT_SPECS = {

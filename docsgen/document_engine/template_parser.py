@@ -13,30 +13,22 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import docx
+from document_engine.formatting_preserver import (NS, element_text,
+                                                  has_drawing, has_page_break,
+                                                  has_section_break,
+                                                  iter_body_blocks,
+                                                  paragraph_text)
+from document_engine.placeholder_manager import (PLACEHOLDER_RE,
+                                                 document_parts,
+                                                 find_placeholders)
 from docx.document import Document as DocxDocument
 from docx.oxml.ns import qn
 from docx.shared import Emu
 from docx.text.paragraph import Paragraph
 from lxml import etree
-
-from document_engine.formatting_preserver import (
-    NS,
-    element_text,
-    has_drawing,
-    has_page_break,
-    has_section_break,
-    iter_body_blocks,
-    paragraph_text,
-)
-from document_engine.placeholder_manager import PLACEHOLDER_RE, document_parts, find_placeholders
-from models.document_models import (
-    HeaderFooterInfo,
-    PageSetup,
-    Placeholder,
-    TableInfo,
-    TemplateSection,
-    TemplateStructure,
-)
+from models.document_models import (HeaderFooterInfo, PageSetup, Placeholder,
+                                    TableInfo, TemplateSection,
+                                    TemplateStructure)
 
 INSTRUCTION_PATTERNS = [
     re.compile(r"^\s*\[[^\]]{2,}\]\s*$"),
@@ -44,13 +36,18 @@ INSTRUCTION_PATTERNS = [
     re.compile(
         r"^\s*(insert|enter|describe|provide|add|type|write|list|summari[sz]e|explain|include|state|outline|detail|"
         r"identify|specify|document|define|give|discuss|present|propose|fill in|complete|replace)\b",
-        re.I,
+        re.IGNORECASE,
     ),
-    re.compile(r"\bthis (section|chapter|part)\b.{0,40}\b(should|will|must|shall|provides?|presents?|contains?|describes?|includes?|synthesi[sz]es|proposes)\b", re.I),
-    re.compile(r"lorem ipsum", re.I),
-    re.compile(r"^\s*(tbd|todo|to be (completed|added|determined|confirmed))\b", re.I),
-    re.compile(r"\bminimum requirement\b", re.I),
-    re.compile(r"^\s*(placeholder|sample text|example text)\b", re.I),
+    re.compile(
+        r"\bthis (section|chapter|part)\b.{0,40}\b(should|will|must|shall|provides?|presents?|contains?|describes?|includes?|synthesi[sz]es|proposes)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"lorem ipsum", re.IGNORECASE),
+    re.compile(
+        r"^\s*(tbd|todo|to be (completed|added|determined|confirmed))\b", re.IGNORECASE
+    ),
+    re.compile(r"\bminimum requirement\b", re.IGNORECASE),
+    re.compile(r"^\s*(placeholder|sample text|example text)\b", re.IGNORECASE),
 ]
 
 
@@ -82,7 +79,7 @@ def _style_heading_level(paragraph: Paragraph) -> int | None:
     m = re.match(r"^(Heading|heading)\s*(\d)$", name)
     if m:
         return int(m.group(2))
-    outline = paragraph._p.find("w:pPr/w:outlineLvl", NS)  # noqa: SLF001
+    outline = paragraph._p.find("w:pPr/w:outlineLvl", NS)
     if outline is None and style is not None:
         outline = style.element.find("w:pPr/w:outlineLvl", NS)
         # follow basedOn chain once (common for custom heading styles)
@@ -106,7 +103,13 @@ def _looks_like_fallback_heading(paragraph: Paragraph, text: str) -> bool:
     runs = [r for r in paragraph.runs if r.text.strip()]
     if not runs:
         return False
-    bold = all(r.bold or (r.bold is None and paragraph.style is not None and paragraph.style.font.bold) for r in runs)
+    bold = all(
+        r.bold
+        or (
+            r.bold is None and paragraph.style is not None and paragraph.style.font.bold
+        )
+        for r in runs
+    )
     return bool(bold and (stripped.isupper() or len(stripped.split()) <= 10))
 
 
@@ -115,11 +118,13 @@ def build_blocks(doc: DocxDocument) -> list[Block]:
     body = doc.element.body
     for i, el in enumerate(iter_body_blocks(body)):
         if el.tag == qn("w:p"):
-            para = Paragraph(el, doc._body)  # noqa: SLF001
+            para = Paragraph(el, doc._body)
             text = paragraph_text(el)
-            style_name = (para.style.name if para.style is not None else "") or ""
+            style_name = (
+                para.style.name if para.style is not None else "") or ""
             level = _style_heading_level(para) if text.strip() else None
-            structural = has_section_break(el) or has_page_break(el) or has_drawing(el)
+            structural = has_section_break(
+                el) or has_page_break(el) or has_drawing(el)
             blocks.append(
                 Block(
                     index=i,
@@ -135,10 +140,13 @@ def build_blocks(doc: DocxDocument) -> list[Block]:
             )
         else:
             kind = "tbl" if el.tag == qn("w:tbl") else "sdt"
-            blocks.append(Block(index=i, element=el, kind=kind, text=element_text(el)))
+            blocks.append(Block(index=i, element=el,
+                          kind=kind, text=element_text(el)))
     if not any(b.heading_level is not None for b in blocks):
         for b in blocks:
-            if b.kind == "p" and _looks_like_fallback_heading(Paragraph(b.element, doc._body), b.text):  # noqa: SLF001
+            if b.kind == "p" and _looks_like_fallback_heading(
+                Paragraph(b.element, doc._body), b.text
+            ):
                 b.heading_level = 1
                 b.instructional = False
     return blocks
@@ -146,7 +154,9 @@ def build_blocks(doc: DocxDocument) -> list[Block]:
 
 def build_sections(blocks: list[Block]) -> list[TemplateSection]:
     sections: list[TemplateSection] = []
-    current = TemplateSection(section_id="s00", title="(Document start)", level=0, heading_block=None)
+    current = TemplateSection(
+        section_id="s00", title="(Document start)", level=0, heading_block=None
+    )
     counter = 0
 
     def close(section: TemplateSection) -> None:
@@ -155,7 +165,8 @@ def build_sections(blocks: list[Block]) -> list[TemplateSection]:
         section.content_text = "\n".join(texts)[:4000]
         real = [b for b in body if b.text.strip() and not b.instructional]
         section.is_empty = not real
-        section.instructional_blocks = [b.index for b in body if b.instructional]
+        section.instructional_blocks = [
+            b.index for b in body if b.instructional]
         keys: list[str] = []
         for b in body:
             keys += PLACEHOLDER_RE.findall(b.text)
@@ -183,10 +194,13 @@ def _inches(value: Emu | int | None) -> float | None:
     return round(Emu(value).inches, 2) if value is not None else None
 
 
-def analyze_document(doc: DocxDocument, file_name: str, sha256: str) -> tuple[TemplateStructure, list[Block]]:
+def analyze_document(
+    doc: DocxDocument, file_name: str, sha256: str
+) -> tuple[TemplateStructure, list[Block]]:
     blocks = build_blocks(doc)
     sections = build_sections(blocks)
-    section_of_block = {idx: s.section_id for s in sections for idx in s.body_blocks}
+    section_of_block = {
+        idx: s.section_id for s in sections for idx in s.body_blocks}
 
     tables: list[TableInfo] = []
     table_counter = 0
@@ -197,7 +211,8 @@ def analyze_document(doc: DocxDocument, file_name: str, sha256: str) -> tuple[Te
         preview = []
         max_cols = 0
         for tr in rows[:8]:
-            cells = [element_text(tc).strip()[:60] for tc in tr.findall("w:tc", NS)]
+            cells = [element_text(tc).strip()[:60]
+                     for tc in tr.findall("w:tc", NS)]
             max_cols = max(max_cols, len(cells))
             preview.append(cells)
         tables.append(
@@ -205,7 +220,8 @@ def analyze_document(doc: DocxDocument, file_name: str, sha256: str) -> tuple[Te
                 index=table_counter,
                 block=b.index,
                 rows=len(rows),
-                cols=max(max_cols, len(b.element.findall("w:tblGrid/w:gridCol", NS))),
+                cols=max(max_cols, len(
+                    b.element.findall("w:tblGrid/w:gridCol", NS))),
                 preview=preview,
                 section_id=section_of_block.get(b.index),
                 placeholders=sorted(set(PLACEHOLDER_RE.findall(b.text))),
@@ -218,7 +234,9 @@ def analyze_document(doc: DocxDocument, file_name: str, sha256: str) -> tuple[Te
 
     placeholders: dict[str, Placeholder] = {}
     for hit in find_placeholders(doc):
-        ph = placeholders.setdefault(hit.key, Placeholder(key=hit.key, raw=hit.raw, count=0))
+        ph = placeholders.setdefault(
+            hit.key, Placeholder(key=hit.key, raw=hit.raw, count=0)
+        )
         ph.count += 1
         if hit.location not in ph.locations:
             ph.locations.append(hit.location)
@@ -227,12 +245,20 @@ def analyze_document(doc: DocxDocument, file_name: str, sha256: str) -> tuple[Te
     headers_footers: list[HeaderFooterInfo] = []
     for idx, section in enumerate(doc.sections):
         for kind in ("header", "footer"):
-            for variant, attr in (("default", kind), ("first_page", f"first_page_{kind}"), ("even_page", f"even_page_{kind}")):
+            for variant, attr in (
+                ("default", kind),
+                ("first_page", f"first_page_{kind}"),
+                ("even_page", f"even_page_{kind}"),
+            ):
                 hf = getattr(section, attr)
-                if hf.is_linked_to_previous:  # do not touch: accessing paragraphs would create a new part
+                if (
+                    hf.is_linked_to_previous
+                ):  # do not touch: accessing paragraphs would create a new part
                     continue
-                root = hf._element  # noqa: SLF001
-                text = "\n".join(paragraph_text(p) for p in root.iter(qn("w:p"))).strip()
+                root = hf._element
+                text = "\n".join(
+                    paragraph_text(p) for p in root.iter(qn("w:p"))
+                ).strip()
                 headers_footers.append(
                     HeaderFooterInfo(
                         section_index=idx,
@@ -258,7 +284,9 @@ def analyze_document(doc: DocxDocument, file_name: str, sha256: str) -> tuple[Te
                     "left": _inches(section.left_margin),
                     "right": _inches(section.right_margin),
                 },
-                start_type=str(section.start_type).split(".")[-1].split(" ")[0] if section.start_type is not None else None,
+                start_type=str(section.start_type).split(".")[-1].split(" ")[0]
+                if section.start_type is not None
+                else None,
             )
         )
 
@@ -284,13 +312,22 @@ def analyze_document(doc: DocxDocument, file_name: str, sha256: str) -> tuple[Te
     image_count = 0
     hyperlink_count = 0
     for _, _, root in document_parts(doc):
-        image_count += sum(1 for _ in root.iter("{http://schemas.openxmlformats.org/drawingml/2006/main}blip"))
+        image_count += sum(
+            1
+            for _ in root.iter(
+                "{http://schemas.openxmlformats.org/drawingml/2006/main}blip"
+            )
+        )
         hyperlink_count += sum(1 for _ in root.iter(qn("w:hyperlink")))
     warnings = []
     if not any(s.heading_block is not None for s in sections):
-        warnings.append("No headings were found; section-based insertion is limited. Placeholders still work.")
+        warnings.append(
+            "No headings were found; section-based insertion is limited. Placeholders still work."
+        )
     if any(p.split_across_runs for p in placeholders.values()):
-        warnings.append("Some placeholders are split across several Word runs; they will still be replaced correctly.")
+        warnings.append(
+            "Some placeholders are split across several Word runs; they will still be replaced correctly."
+        )
 
     structure = TemplateStructure(
         file_name=file_name,
@@ -312,9 +349,13 @@ def analyze_document(doc: DocxDocument, file_name: str, sha256: str) -> tuple[Te
     return structure, blocks
 
 
-def parse_template(path: Path | str, display_name: str | None = None) -> TemplateStructure:
+def parse_template(
+    path: Path | str, display_name: str | None = None
+) -> TemplateStructure:
     path = Path(path)
     data = path.read_bytes()
     doc = docx.Document(str(path))
-    structure, _ = analyze_document(doc, display_name or path.name, hashlib.sha256(data).hexdigest())
+    structure, _ = analyze_document(
+        doc, display_name or path.name, hashlib.sha256(data).hexdigest()
+    )
     return structure

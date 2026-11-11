@@ -13,7 +13,9 @@ class SourceRef(BaseModel):
 
     doc_id: str
     file_name: str
-    location: str  # e.g. "page 3", "sheet Budget rows 1-20", "paragraph 12", "lines 40-60"
+    location: (
+        str  # e.g. "page 3", "sheet Budget rows 1-20", "paragraph 12", "lines 40-60"
+    )
     chunk_id: str | None = None
     excerpt: str | None = None
 
@@ -26,7 +28,9 @@ class Placeholder(BaseModel):
     key: str
     raw: str
     count: int = 1
-    locations: list[str] = Field(default_factory=list)  # body / table / header / footer / textbox
+    locations: list[str] = Field(
+        default_factory=list
+    )  # body / table / header / footer / textbox
     split_across_runs: bool = False
 
 
@@ -34,7 +38,9 @@ class TemplateSection(BaseModel):
     section_id: str
     title: str
     level: int
-    heading_block: int | None  # top-level body block index of the heading (None = preamble)
+    heading_block: (
+        int | None
+    )  # top-level body block index of the heading (None = preamble)
     body_blocks: list[int] = Field(default_factory=list)
     content_text: str = ""
     is_empty: bool = True
@@ -44,7 +50,10 @@ class TemplateSection(BaseModel):
 
     @property
     def has_real_content(self) -> bool:
-        return bool(set(self.body_blocks) - set(self.instructional_blocks)) and not self.is_empty
+        return (
+            bool(set(self.body_blocks) - set(self.instructional_blocks))
+            and not self.is_empty
+        )
 
 
 class TableInfo(BaseModel):
@@ -102,14 +111,26 @@ class TemplateStructure(BaseModel):
         lines = []
         for s in self.sections:
             indent = "  " * max(0, s.level - 1)
-            flag = "EMPTY" if s.is_empty else ("INSTRUCTIONS ONLY" if not s.has_real_content else "HAS CONTENT")
+            flag = (
+                "EMPTY"
+                if s.is_empty
+                else ("INSTRUCTIONS ONLY" if not s.has_real_content else "HAS CONTENT")
+            )
             lines.append(f"{indent}[{s.section_id}] {s.title} ({flag})")
             if s.content_text:
-                lines.append(f"{indent}    current text: {s.content_text[:400]}")
+                lines.append(
+                    f"{indent}    current text: {s.content_text[:400]}")
             if s.placeholders:
-                lines.append(f"{indent}    placeholders: {', '.join(s.placeholders)}")
+                lines.append(
+                    f"{indent}    placeholders: {', '.join(s.placeholders)}")
         if self.placeholders:
-            lines.append("Placeholders: " + ", ".join(f"{{{{{p.key}}}}} ({'/'.join(p.locations)})" for p in self.placeholders))
+            lines.append(
+                "Placeholders: "
+                + ", ".join(
+                    f"{{{{{p.key}}}}} ({'/'.join(p.locations)})"
+                    for p in self.placeholders
+                )
+            )
         text = "\n".join(lines)
         return text[:max_chars]
 
